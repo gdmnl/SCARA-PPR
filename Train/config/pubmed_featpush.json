@@ -1,0 +1,16 @@
+{
+    "data": "pubmed",
+    "algo": "featpush",
+    "epochs": 1000,
+    "patience": 100,
+    "batch": 64,
+    "lr": 0.005,
+    "weight_decay": 1e-4,
+    "layer": 2,
+    "hidden": 128,
+    "dropout": 0.3,
+    "bias": "none",
+    "alpha": 0.1,
+    "eps": 8,
+    "rrz": 0.5
+}

@@ -1,0 +1,16 @@
+{
+    "data": "reddit",
+    "algo": "featpush",
+    "epochs": 1000,
+    "patience": 100,
+    "batch": 64,
+    "lr": 0.005,
+    "weight_decay": 1e-4,
+    "layer": 4,
+    "hidden": 128,
+    "dropout": 0.5,
+    "bias": "none",
+    "alpha": 0.5,
+    "eps": 64,
+    "rrz": 0.5
+}
