@@ -1,5 +1,5 @@
 # SCARA-PPR
-This is the origianl code for SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization
+This is the original code for *SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization*
 
 ## Baselines
 * GraphSAINT: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)
