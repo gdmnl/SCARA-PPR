@@ -14,7 +14,7 @@ class Dense(nn.Module):
             self.bias = nn.BatchNorm1d(out_features)
         else:
             self.bias = lambda x: x
-            
+
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -28,9 +28,9 @@ class Dense(nn.Module):
             output = output + input
         return output
 
-class GnnBP(nn.Module):
+class MLP(nn.Module):
     def __init__(self, nfeat, nlayers,nhidden, nclass, dropout, bias):
-        super(GnnBP, self).__init__()
+        super(MLP, self).__init__()
         self.fcs = nn.ModuleList()
         self.fcs.append(Dense(nfeat, nhidden, bias))
         for _ in range(nlayers-2):
@@ -52,9 +52,3 @@ class GnnBP(nn.Module):
 
 if __name__ == '__main__':
     pass
-
-
-
-
-
-
