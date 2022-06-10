@@ -21,9 +21,11 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
 ## Usage
 
 ### Precompute
-1. Install [fast_double_parser](https://github.com/lemire/fast_double_parser)
-2. CMake `cmake -B build`, then `make`
-3. Run scripts `./run_reddit.sh`
+1. Requirements: CMake 3.16, C++ 11
+2. Install [fast_double_parser](https://github.com/lemire/fast_double_parser)
+3. CMake `cmake -B build`, then `make`
+4. Run scripts `./run_reddit.sh`
 
 ### Train
-1. Run python `python run.py`
+1. Install dependencies: `conda create --name <envname> --file requirements.txt`
+2. Run python `python run.py`

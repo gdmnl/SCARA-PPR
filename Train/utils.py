@@ -1,7 +1,5 @@
 import resource
 import numpy as np
-import scipy.sparse
-import sklearn
 from sklearn.metrics import f1_score
 
 np.set_printoptions(linewidth=150, edgeitems=5,
