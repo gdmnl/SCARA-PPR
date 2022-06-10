@@ -50,8 +50,7 @@ Param param;
 
 Param parseArgs(int nargs, char **args) {
     std::vector<std::string> Algorithms{
-            "PowItr", "PowForPush", "FwdPush", "GROUND_TRUTH", "BUILD_INDEX",
-            "CLEAN_GRAPH", "GEN_QUERY", "FEATPUSH", "FEATPUSH_REUSE",
+            "BUILD_INDEX", "CLEAN_GRAPH", "GEN_QUERY", "FEATPUSH", "FEATREUSE",
     };
 
     Param rtn;
@@ -148,6 +147,12 @@ Param parseArgs(int nargs, char **args) {
         } else if (para == "query_size") {
             rtn.query_size = std::stoul(getNextWord(arg));
             printf("#Queries: %d\n", rtn.query_size);
+        } else if (para == "gamma") {
+            rtn.gamma = std::stod(getNextWord(arg));
+            printf("Gamma: %.12f\n", rtn.gamma);
+        } else if (para == "base_ratio") {
+            rtn.base_ratio = std::stod(getNextWord(arg));
+            printf("Base ratio: %.12f\n", rtn.base_ratio);
         }  else {
             printf("Unknown option -%s!\n\n", para.c_str());
             exit(0);
