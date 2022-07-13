@@ -1,0 +1,80 @@
+#for GNU make
+
+FILES = SFMT.h \
+	SFMT-params.h \
+	SFMT.c \
+	SFMT-alti.h \
+	SFMT-neon.h \
+	SFMT-sse2.h \
+	SFMT-sse2-msc.h \
+	SFMT-common.h \
+	SFMT-params607.h \
+	SFMT-params1279.h \
+	SFMT-params2281.h \
+	SFMT-params4253.h \
+	SFMT-params11213.h \
+	SFMT-params19937.h \
+	SFMT-params44497.h \
+	SFMT-params86243.h \
+	SFMT-params132049.h \
+	SFMT-params216091.h \
+	SFMT.607.out.txt \
+	SFMT.1279.out.txt \
+	SFMT.2281.out.txt \
+	SFMT.4253.out.txt \
+	SFMT.11213.out.txt \
+	SFMT.19937.out.txt \
+	SFMT.44497.out.txt \
+	SFMT.86243.out.txt \
+	SFMT.132049.out.txt \
+	SFMT.216091.out.txt \
+	SFMT.607.64.out.txt \
+	SFMT.1279.64.out.txt \
+	SFMT.2281.64.out.txt \
+	SFMT.4253.64.out.txt \
+	SFMT.11213.64.out.txt \
+	SFMT.19937.64.out.txt \
+	SFMT.44497.64.out.txt \
+	SFMT.86243.64.out.txt \
+	SFMT.132049.64.out.txt \
+	SFMT.216091.64.out.txt \
+	FILES.txt \
+	LICENSE.txt \
+	Makefile \
+	Makefile.armv7a \
+	Makefile.aarch64 \
+	test.c \
+	check.sh \
+	CHANGE-LOG.txt \
+	README.txt \
+	html
+
+VERSION = 1.5.2
+DIR = SFMT-src-${VERSION}
+
+doc:
+	rm -rf html
+	doxygen doxygen.cfg
+	cp howto-compile.html html
+
+.PHONY : tar.gz
+tar.gz: $(FILES)
+	mkdir ${DIR}
+	mkdir ${DIR}/params
+	cp -r ${FILES} ${DIR}
+	cp params/*.csv params/*.txt params/*.awk ${DIR}/params
+	tar czvf ${DIR}.tar.gz ${DIR}/*
+	rm -rf ${DIR}
+
+.PHONY : zip
+zip: $(FILES)
+	mkdir ${DIR}
+	mkdir ${DIR}/params
+	rm -f ${DIR}.zip
+	cp -r ${FILES} ${DIR}
+	cp params/*.csv params/*.txt params/*.awk ${DIR}/params
+	zip -r ${DIR}.zip ${DIR}/*
+	rm -rf ${DIR}
+
+clean:
+	rm -f *.o *~

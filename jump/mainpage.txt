@@ -1,0 +1,50 @@
+/**
+ * \mainpage
+ *
+ * This is SIMD oriented Fast Mersenne Twister pseudorandom number
+ * generator(SFMT) with jump function.
+ *
+ * This Project provides jump function of SFMT.
+ *
+ * We are very sorry but we don't support either BIG ENDIAN or altivec
+ * in this version.
+ *
+ * There are two steps for jumpping.
+ * <ol>
+ *  <li>Calculate jump polynomial using characteristic polynomial.
+ *   <ul>
+ *    <li>\b calc-jump executable file calculates a jump polynomial.
+ *    <li>\b calc-jump is written in C++ language and needs NTL for compile.
+ *    <li> Additionally, users can call
+ *     sfmt::calc_jump(std::string& jump_str, NTL::ZZ& step,
+ *     NTL::GF2X& characteristic) in SFMT-calc-jump.hpp from their
+ *     programs.
+ *    <li> jump steps used above is based on internal state,
+ *     i.e, 32-bit integers are skipped 4 * jump steps, and 64-bit
+ *     integers are skipped 2 * jump steps.
+ *   </ul>
+ *  <li> Change internal state of SFMT into jumpped state.
+ *   <ul>
+ *     <li>\b SFMT_jump(sfmt_t * sfmt, const char * jump_str)
+ *         changes internal state of \b sfmt in user's programs.
+ *     <li> @see sample1.c sample2.c
+ *   </ul>
+ * </ol>
+ *
+ * Caution:
+ *   The jump polynomial calculated using a characteristic polynomial
+ * is only available for jumpping SFMT states which has the
+ * characteristic polynomial.
+ *
+ * @author Mutsuo Saito (Hiroshima University)
+ * @author Makoto Matsumoto (The University of Tokyo)
+ *
+ * @date 2012-05-29
+ *
+ * Copyright (C) 2012 Mutsuo Saito, Makoto Matsumoto, Hiroshima
+ * University and The University of Tokyo.
+ * All rights reserved.
+ *
+ * The 3-clause BSD License is applied to this software.
+ * \verbinclude LICENSE.txt
+ */
