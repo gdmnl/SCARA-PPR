@@ -1,3 +1,0 @@
-[submodule "Precompute/fast_double_parser"]
-	path = Precompute/fast_double_parser-master
-	url = https://github.com/lemire/fast_double_parser.git
