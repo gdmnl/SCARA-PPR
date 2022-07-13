@@ -1,0 +1,107 @@
+# -*- makefile -*-
+#for GNU make
+
+#DDEBUG = -O0 -g -ggdb -DDEBUG=1
+
+# uncomment next line if you installed NTL with gf2x
+LIBGF2X = -lgf2x
+# uncomment next line if you installed NTL with gmp
+#LIBGMP = -lgmp
+
+DEFINES = -D__STDC_CONSTANT_MACROS=1 -D__STDC_FORMAT_MACROS=1
+CPP = g++
+#CPP = icc
+GPPFLAGS = -msse2
+#ICCPPFLAGS = -mssse3
+
+CC = gcc
+#CC = icc -fast
+GCCFLAGS = -msse2 --param max-inline-insns-single=1800
+#ICCFLAGS = -fast
+OPTI = -O3 -finline-functions -fomit-frame-pointer
+CCSTD = -std=c99
+WARN = -Wall #-Winline
+SSE2FLAGS = -msse2 -DHAVE_SSE2
+CCFLAGS = -Wmissing-prototypes -I../ $(SSE2FLAGS) $(GCCFLAGS) $(ICCFLAGS) \
+	$(OPTI) $(WARN) $(CCSTD) $(DDEBUG)
+CPPFLAGS = -I../ $(SSE2FLAGS) $(OPTI) $(GPPFLAGS) $(ICCPPFLAGS) $(WARN) \
+	$(DEFINES) $(DDEBUG)
+
+LINKOPT = -lntl $(LIBGF2X) $(LIBGMP)
+
+FILES = SFMT-jump.h \
+	SFMT-jump.c \
+	SFMT-calc-jump.hpp \
+	calc-jump.cpp \
+	characteristic.607.txt \
+	characteristic.1279.txt \
+	characteristic.2281.txt \
+	characteristic.4253.txt \
+	characteristic.11213.txt \
+	characteristic.19937.txt \
+	characteristic.44497.txt \
+	characteristic.86243.txt \
+	characteristic.132049.txt \
+	characteristic.216091.txt \
+	FILES.txt \
+	LICENSE.txt \
+	Makefile \
+	test.c \
+	test-jump.cpp \
+	sample1.c \
+	sample2.c \
+	check-jump.sh \
+	CHANGE-LOG.txt \
+	readme.html \
+	readme-jp.html \
+	html
+
+VERSION = 0.1
+DIR = SFMTJump-src-${VERSION}
+
+doc:
+	rm -rf html
+	doxygen doxygen.cfg
+
+.PHONY : tar.gz
+tar.gz: $(FILES)
+	mkdir ${DIR}
+	mkdir ${DIR}/jump
+	mkdir ${DIR}/jump/params
+	cp -r ${FILES} ${DIR}/jump
+	cp params/*.txt ${DIR}/jump/params
+	tar czvf ${DIR}.tar.gz ${DIR}/*
+	rm -rf ${DIR}
+
+.PHONY : zip
+zip: $(FILES)
+	mkdir ${DIR}
+	mkdir ${DIR}/jump
+	mkdir ${DIR}/jump/params
+	rm -f ${DIR}.zip
+	cp -r ${FILES} ${DIR}/jump
+	cp params/*.txt ${DIR}/jump/params
+	zip -r ${DIR}.zip ${DIR}/*
+	rm -rf ${DIR}
+
+#
+# jump
+#
+calc-characteristic: calc-characteristic.cpp SFMText.hpp SFMT-calc-jump.hpp
+	${CPP} ${CPPFLAGS} -DMAIN -o $@ calc-characteristic.cpp ${LINKOPT}
+
+test-string: test-string.cpp SFMT-calc-jump.hpp
+	${CPP} ${CPPFLAGS} -o $@ test-string.cpp ${LINKOPT}
+
+.cpp.o:
+	${CPP} -c $<
+
+.c.o:
+	${CC} ${CCFLAGS} -c $<
+
+clean:
+	rm -f *.o *~
+
+clean-all:
+	rm -rf *.o *~ *.dSYM ${ALL_STD_TARGET} ${ALL_SSE2_TARGET} \
+	${ALL_JUMP_TARGET}
