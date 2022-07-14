@@ -75,7 +75,7 @@ struct Param {
     std::string vt_file;
     std::string feature_file;
     std::string graph_binary_file;
-    std::string algorithm = "PowItr";
+    std::string algorithm = "FEATPUSH";
     std::string output_folder;
     std::string estimation_folder;
     double epsilon = 0.5;

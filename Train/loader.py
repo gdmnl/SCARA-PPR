@@ -118,7 +118,7 @@ def load_transductive_data(algo, datastr, alpha, eps, rrz, seed=0):
     idx_test = torch.LongTensor(processor.idx_test)
 
     # Get topk P
-    ppr_file = f'../save/{datastr}/feat/{seed}'
+    ppr_file = f'../save/{datastr}/{algo}/{seed}'
     file_weights = f'{ppr_file}/score_{eps:g}.npy'
     weights = np.load(file_weights)
     features = weights
@@ -183,8 +183,8 @@ def load_inductive_data(algo, datastr, alpha, eps, rrz, seed=0):
         features = matstd_clip(features)
         return features
 
-    features = precompute('feat', idx=None)
-    features_train = precompute('feat_train', idx=idx_train)
+    features = precompute(f'{algo}', idx=None)
+    features_train = precompute(f'{algo}_train', idx=idx_train)
     print(features_train[:5, :])
     print(features[idx_train, :])
     print(features[-5:, :])
@@ -242,7 +242,7 @@ def load_paper(algo, datastr, alpha, eps, rrz, seed=0):
     idx_all = torch.LongTensor(idx_all)
 
     # Get topk P
-    ppr_file = f'../save/{datastr}/feat/{seed}'
+    ppr_file = f'../save/{datastr}/{algo}/{seed}'
     file_weights = f'{ppr_file}/score_{eps:g}.npy'
     weights = np.load(file_weights)
     features = scipy.sparse.csr_matrix((128, n), dtype=np.float32)

@@ -20,7 +20,7 @@ from model import MLP
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--seed', type=int, default=0, help='random seed.')
 parser.add_argument('-c', '--config', default='./config/reddit_gbp.json', help='config path.')
-parser.add_argument('-v', '--dev', type=int, default=-1, help='device id')
+parser.add_argument('-v', '--dev', type=int, default=-1, help='device id.')
 args = prepare_opt(parser)
 
 random.seed(args.seed)

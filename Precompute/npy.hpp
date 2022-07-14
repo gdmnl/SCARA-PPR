@@ -279,7 +279,7 @@ inline bool parse_bool(const std::string &in) {
   if (in == "False")
     return false;
 
-  throw std::runtime_error("Invalid python boolan.");
+  throw std::runtime_error("Invalid python boolean.");
 }
 
 /**
@@ -293,7 +293,7 @@ inline std::string parse_str(const std::string &in) {
 }
 
 /**
-  Parses the string represenatation of a Python tuple into a vector of its items
+  Parses the string representation of a Python tuple into a vector of its items
  */
 inline std::vector <std::string> parse_tuple(std::string in) {
   std::vector <std::string> v;

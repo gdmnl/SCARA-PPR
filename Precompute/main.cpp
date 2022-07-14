@@ -6,12 +6,9 @@
 #include <random>
 #include "HelperFunctions.h"
 #include "Graph.h"
-#include "IteratedMethods.h"
-#include "QueryLoader.h"
 #include "BatchRandomWalk.h"
 #include "SpeedPPR.h"
 #include "CleanGraph.h"
-#include "QueryGenerator.h"
 #include <unistd.h>
 
 int main(int argc, char **argv) {
@@ -37,11 +34,6 @@ int main(int argc, char **argv) {
                graph.get_neighbor_list_start_pos(graph.get_dummy_id() + 1));
     } else {
         printf("Error in" __FILE__ " LINE %d. Fail to load the graph.\n", __LINE__);
-        return 0;
-    }
-
-    if (param.algorithm == "GEN_QUERY") {
-        QueryGenerator::generate(graph, param.query_file);
         return 0;
     }
 

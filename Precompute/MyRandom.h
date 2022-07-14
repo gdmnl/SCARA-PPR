@@ -8,7 +8,7 @@
 #include <iostream>
 #include <ctime>
 
-#include "SFMT-src-1.5.1/SFMT.h"
+#include "SFMT/SFMT.h"
 
 
 class SFMT64 {

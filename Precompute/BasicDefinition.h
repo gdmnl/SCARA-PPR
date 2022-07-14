@@ -1,4 +1,5 @@
 
+
 #ifndef SPEEDPPR_BASICDEFINITION_H
 #define SPEEDPPR_BASICDEFINITION_H
 
@@ -21,7 +22,6 @@ template<class FLOAT_TYPE>
 struct IdScorePair {
     VertexIdType id = 0;
     FLOAT_TYPE score = 0;
-
 
     IdScorePair(const VertexIdType &_id = 0, const FLOAT_TYPE &_score = 0) :
             id(_id), score(_score) {}
