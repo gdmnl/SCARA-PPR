@@ -50,7 +50,7 @@ Param param;
 
 Param parseArgs(int nargs, char **args) {
     std::vector<std::string> Algorithms{
-            "BUILD_INDEX", "CLEAN_GRAPH", "GEN_QUERY", "FEATPUSH", "FEATREUSE",
+            "CLEAN_GRAPH", "BUILD_INDEX", "FEATPUSH", "FEATREUSE",
     };
 
     Param rtn;
@@ -113,9 +113,6 @@ Param parseArgs(int nargs, char **args) {
         } else if (para == "query") {
             rtn.query_file = getNextWord(arg);
             printf("Input Query File: %s\n", rtn.query_file.c_str());
-        } else if (para == "answer_folder") {
-            rtn.answer_folder = getNextWord(arg);
-            printf("Answer Folder: %s\n", rtn.answer_folder.c_str());
         } else if (para == "output_folder") {
             rtn.output_folder = getNextWord(arg);
             printf("Output Folder: %s\n", rtn.output_folder.c_str());
@@ -123,30 +120,21 @@ Param parseArgs(int nargs, char **args) {
             rtn.output_estimations = true;
             rtn.estimation_folder = getNextWord(arg);
             printf("Estimation Folder: %s\n", rtn.estimation_folder.c_str());
-        }else if (para == "vt_file") {
-            rtn.output_estimations = true;
-            rtn.vt_file = getNextWord(arg);
-            printf("Vt File: %s\n", rtn.estimation_folder.c_str());
-        }else if (para == "feature_file") {
-            rtn.output_estimations = true;
+        } else if (para == "feature_file") {
             rtn.feature_file = getNextWord(arg);
             printf("Feature File: %s\n", rtn.estimation_folder.c_str());
         } else if (para == "index_file") {
             rtn.index_file = getNextWord(arg);
             printf("Output Index File: %s\n", rtn.index_file.c_str());
+        } else if (para == "split_num") {
+            rtn.split_num = std::stoi(getNextWord(arg));
+            printf("Number of Split: %d\n", rtn.split_num);
         } else if (para == "epsilon") {
             rtn.epsilon = std::stod(getNextWord(arg));
             printf("Epsilon: %.12f\n", rtn.epsilon);
         } else if (para == "alpha") {
             rtn.alpha = std::stod(getNextWord(arg));
             printf("Alpha: %.12f\n", rtn.alpha);
-        } else if (para == "l1_error") {
-            rtn.l1_error = std::stod(getNextWord(arg));
-            rtn.specified_l1_error = true;
-            printf("L1 ERROR: %.12f\n", rtn.l1_error);
-        } else if (para == "query_size") {
-            rtn.query_size = std::stoul(getNextWord(arg));
-            printf("#Queries: %d\n", rtn.query_size);
         } else if (para == "gamma") {
             rtn.gamma = std::stod(getNextWord(arg));
             printf("Gamma: %.12f\n", rtn.gamma);

@@ -1,5 +1,6 @@
 {
     "data": "reddit",
+    "path": "../data/",
     "algo": "featpush",
     "epochs": 1000,
     "patience": 100,
@@ -12,5 +13,6 @@
     "bias": "none",
     "alpha": 0.5,
     "eps": 64,
-    "rrz": 0.5
+    "rrz": 0.5,
+    "spt": 1
 }

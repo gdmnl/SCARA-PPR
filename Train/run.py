@@ -1,5 +1,6 @@
 # Ref: https://github.com/chennnM/GBP
 import gc
+from pyexpat import features
 import time
 import random
 import argparse
@@ -35,13 +36,12 @@ logger = Logger(args.data, args.algo, flag_run=flag_run)
 logger.save_opt(args)
 model_logger = ModelLogger(logger, state_only=True)
 
-features_train, features_val, features_test, labels, idx_train, idx_val, idx_test = load_data(args.algo,
-            datastr=args.data, alpha=args.alpha, eps=args.eps,
-            rrz=args.rrz, seed=args.seed)
+feat, labels, idx = load_data(args.algo, datastr=args.data, datapath=args.path,
+            inductive=args.inductive, multil=args.multil, spt=args.spt,
+            alpha=args.alpha, eps=args.eps, rrz=args.rrz, seed=args.seed)
 nclass = labels.shape[1] if args.multil else int(labels.max()) + 1
-labels = labels.float() if args.multil else labels
 
-model = MLP(nfeat=features_train.shape[1],
+model = MLP(nfeat=feat['train'].shape[1],
             nlayers=args.layer,
             nhidden=args.hidden,
             nclass=nclass,
@@ -55,15 +55,15 @@ optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, threshold=1e-4, patience=20, verbose=False)
 loss_fn = nn.BCEWithLogitsLoss() if args.multil else nn.CrossEntropyLoss()
 
-ds_train = Data.TensorDataset(features_train, labels[idx_train])
+ds_train = Data.TensorDataset(feat['train'], labels[idx['train']])
 loader_train = Data.DataLoader(dataset=ds_train, batch_size=args.batch,
                                shuffle=True, num_workers=0)
-ds_val = Data.TensorDataset(features_val, labels[idx_val])
+ds_val = Data.TensorDataset(feat['val'], labels[idx['val']])
 loader_val = Data.DataLoader(dataset=ds_val, batch_size=args.batch,
                              shuffle=False, num_workers=0)
-ds_test = Data.TensorDataset(features_test, labels[idx_test])
+ds_test = Data.TensorDataset(feat['test'], labels[idx['test']])
 loader_test = Data.DataLoader(dataset=ds_test, batch_size=args.batch,
-                              shuffle=False, num_workers=10)
+                              shuffle=False, num_workers=0)
 
 
 def train(ld=loader_train):
@@ -118,7 +118,7 @@ def eval(ld, load_best=False):
 print('-' * 20)
 print('Start training...')
 train_time = 0
-bad_counter = 0
+es_counter = 0
 
 for epoch in range(args.epochs):
     loss_tra, train_ep = train()
@@ -129,17 +129,19 @@ for epoch in range(args.epochs):
         res = f"Epoch:{epoch+1:04d} | train loss:{loss_tra:.4f}, val acc:{acc_val:.4f}, cost:{train_time:.4f}"
         logger.print(res)
     is_best = model_logger.save_best(acc_val, epoch=epoch)
+    # Early stopping
     if is_best:
-        bad_counter = 0
+        es_counter = 0
     else:
-        bad_counter += 1
-    if bad_counter == args.patience:
+        es_counter += 1
+    if es_counter == args.patience:
         break
 
 acc_train = eval(ld=loader_train, load_best=True)
 print(f"Train time cost: {train_time:0.4f}")
 print(f"Train best acc: {acc_train:0.4f}, Val best acc: {model_logger.acc_best:0.4f}")
 
+print('-' * 20)
 print("Start inference...")
 start = time.time()
 acc_test = eval(ld=loader_test, load_best=True)

@@ -11,18 +11,19 @@ import sklearn.preprocessing
 
 
 NTRAIN_PER_CLASS = 20
+NVAL_PER_CLASS = NTRAIN_PER_CLASS * 10
 
 
 # ====================
 def diag_sp(diag):
-    """scipy sparse diagonal matrix"""
+    """Diagonal array to scipy sparse diagonal matrix"""
     n = len(diag)
     return scipy.sparse.dia_matrix((diag, [0]), shape=(n, n))
 
 
-def matstd(m):
-    # scaler = sklearn.preprocessing.StandardScaler()
-    scaler = sklearn.preprocessing.StandardScaler(with_mean=False)
+def matstd(m, with_mean=False):
+    """Matrix standardization"""
+    scaler = sklearn.preprocessing.StandardScaler(with_mean=with_mean)
     m = scaler.fit_transform(m)
     return m
 
@@ -43,11 +44,44 @@ def matnorm_inf_dual(m, axis=0):
 
 
 def split_random(seed, n, n_train, n_val):
+    """Split index randomly"""
     np.random.seed(seed)
     rnd = np.random.permutation(n)
 
     train_idx = np.sort(rnd[:n_train])
     val_idx = np.sort(rnd[n_train:n_train + n_val])
+
+    train_val_idx = np.concatenate((train_idx, val_idx))
+    test_idx = np.sort(np.setdiff1d(np.arange(n), train_val_idx))
+    return train_idx, val_idx, test_idx
+
+
+def split_label(seed, n, n_train_per_class, n_val, labels):
+    """Split index with equal label in train set"""
+    np.random.seed(seed)
+    rnd = set(np.arange(n))
+
+    train_idx = np.array([], dtype=np.int)
+    if labels.ndim == 1:
+        lb_nonnan = labels[~np.isnan(labels)]
+        nclass = int(lb_nonnan.max()) + 1
+        for i in range(nclass):
+            cdd = np.where(labels == i)[0]
+            sz = min(n_train_per_class, len(cdd))
+            idxi = np.random.choice(cdd, size=sz, replace=False)
+            train_idx = np.concatenate((train_idx, idxi))
+    else:
+        nclass = labels.shape[1]
+        for i in range(nclass):
+            cdd = np.where(labels[:, i] > 0)[0]
+            sz = min(n_train_per_class, len(cdd))
+            idxi = np.random.choice(cdd, size=sz, replace=False)
+            train_idx = np.concatenate((train_idx, idxi))
+
+    train_idx = np.unique(train_idx.flatten(), axis=0)
+    val_idx = np.array((list( rnd - set(train_idx) )))
+    val_idx = np.random.choice(val_idx, size=n_val, replace=False)
+    val_idx = np.sort(val_idx)
 
     train_val_idx = np.concatenate((train_idx, val_idx))
     test_idx = np.sort(np.setdiff1d(np.arange(n), train_val_idx))
@@ -146,7 +180,9 @@ class DataProcess(object):
             self.input(['labels'])
         # 1D array
         if self.labels.ndim == 1:
-            self._nclass = int(self.labels.max()) + 1
+            # self._nclass = int(self.labels.max()) + 1
+            lb_nonnan = self.labels[~np.isnan(self.labels)]
+            self._nclass = int(lb_nonnan.max()) + 1
         # 2D one hot
         else:
             self._nclass = self.labels.shape[1]
@@ -166,7 +202,7 @@ class DataProcess(object):
                 self.deg = self.adj_matrix.sum(1).A1
             elif key in ['idx_train', 'idx_val', 'idx_test']:
                 n_train = NTRAIN_PER_CLASS * self.nclass
-                n_val = n_train * 10
+                n_val = NVAL_PER_CLASS * self.nclass
                 if 'paper' in self.name:
                     np.random.seed(self.seed)
                     self.input(['idx_train', 'idx_val', 'idx_test'])
@@ -175,6 +211,8 @@ class DataProcess(object):
                     self.idx_train = np.sort(rnd[:n_train])
                     self.idx_val = np.sort(rnd[n_train:n_train + n_val])
                     self.idx_test = np.sort(rnd[n_train + n_val:])
+                elif 'mag' in self.name:
+                    self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)
                 else:
                     self.idx_train, self.idx_val, self.idx_test = split_random(self.seed, self.n, n_train, n_val)
             elif key == 'labels_oh':
@@ -236,6 +274,7 @@ class DataProcess(object):
     def output(self, lst):
         for key in lst:
             if key == 'adjnpz':
+                self.adj_matrix = self.adj_matrix.tocsr()
                 assert scipy.sparse.isspmatrix_csr(self.adj_matrix)
                 scipy.sparse.save_npz(self.adjnpz_path, self.adj_matrix)
             elif key == 'adjtxt':
@@ -266,3 +305,20 @@ class DataProcess(object):
                 np.savez_compressed(self.featsnorm_path, self.attr_matrix_norm)
             else:
                 print("Key not exist: {}".format(key))
+
+    def output_split(self, attr_matrix, spt=10, name='feats'):
+        from tqdm import trange
+        n = attr_matrix.shape[0]
+        nd = n // spt
+        ttl = 0
+        for i in trange(spt):
+            if i < spt - 1:
+                idxl, idxr = i * nd, (i+1) * nd
+            else:
+                idxl, idxr = i * nd, n
+            prt = attr_matrix[idxl:idxr, :]
+            ttl += prt.shape[0]
+
+            prt_path = self._get_path('{}{}.npz'.format(name, i))
+            np.savez(prt_path, prt)
+        print(n, ttl)

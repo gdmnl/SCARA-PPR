@@ -69,26 +69,20 @@ inline double parse_double(const std::string &_str, const size_t &_start, size_t
 struct Param {
     std::string graph_file;
     std::string query_file;
-    std::string answer_folder;
     std::string index_file;
     std::string meta_file;
-    std::string vt_file;
     std::string feature_file;
     std::string graph_binary_file;
     std::string algorithm = "FEATPUSH";
     std::string output_folder;
     std::string estimation_folder;
+    unsigned int split_num = 1;
     double epsilon = 0.5;
     double alpha = 0.2;
-    double l1_error = 0.00000001;
     double gamma = 0.2;
     double base_ratio = 0.04;
-    unsigned int num_top_k = 1;
-    unsigned int query_size = 0;
     bool with_idx = false;
-    bool is_top_k = false;
     bool is_undirected_graph = false;
-    bool specified_l1_error = false;
     bool output_estimations = false;
 };
 
@@ -128,98 +122,54 @@ inline void output_vector(std::vector<T> Vec, std::string filename){
 
 template<class FLOAT_TYPE>
 inline void
-output_matrix(const std::vector<FLOAT_TYPE> &_means, const VertexIdType &_numOfVertices,
-    const std::string &_file_score, std::vector<float> &res_matrix,
-    const unsigned long idxOfFeature, const unsigned long numOfFeature) {
-    // Save [F, n] array of all nodes to res_matrix
-    for (VertexIdType id = 0; id < _numOfVertices; ++id) {
-        res_matrix[idxOfFeature*_numOfVertices+id] = _means[id];
-    }
-    // Save to .npy file
-    if (idxOfFeature == numOfFeature - 1) {
-        std::array<long unsigned, 2> res_shape {{numOfFeature, _numOfVertices}};
-        npy::SaveArrayAsNumpy(_file_score.c_str(), false, res_shape.size(), res_shape.data(), res_matrix);
-        printf("SAVED: %s\n", _file_score.c_str());
-    }
-}
-
-template<class FLOAT_TYPE>
-inline void
-output_matrix10(const std::vector<FLOAT_TYPE> &_means, const VertexIdType &_numOfVertices,
-    const std::string &_file_score, std::vector<float> &res_matrix,
-    const unsigned long idxOfFeature, const unsigned long numOfFeature) {
+output_matrix(const std::vector<FLOAT_TYPE> &_value_vec, std::vector<float> &out_matrix,
+    const std::string &_out_path, const unsigned int split_num,
+    const unsigned long idx_feat, const unsigned long feat_num, const VertexIdType &_node_num) {
     // Decide split
-    unsigned long spt_size = numOfFeature / 10;
-    unsigned long spt = idxOfFeature / spt_size;
-    unsigned long idxf = idxOfFeature % spt_size;
-    // Save [F/10, n] array of all nodes to res_matrix
-    for (VertexIdType id = 0; id < _numOfVertices; ++id) {
-        res_matrix[idxf*_numOfVertices+id] = _means[id];
+    unsigned long spt_size = feat_num / split_num;  // size per split
+    unsigned long spt = idx_feat / spt_size;    // index of split
+    unsigned long idxf = idx_feat % spt_size;   // index of feature in split
+    // Save [F/split_num, n] array of all nodes to out_matrix
+    for (VertexIdType id = 0; id < _node_num; ++id) {
+        out_matrix[idxf*_node_num+id] = _value_vec[id];
     }
 
     // Save to .npy file
-    if ((idxf + 1) % spt_size == 0 || idxOfFeature == numOfFeature - 1) {
-        std::string spt_path = _file_score;
-        spt_path = spt_path.insert(_file_score.length() - 4, std::to_string(spt));
-        std::array<long unsigned, 2> res_shape {{spt_size, _numOfVertices}};
-        npy::SaveArrayAsNumpy(spt_path, false, res_shape.size(), res_shape.data(), res_matrix);
-        printf("SAVED: %s\n", _file_score.c_str());
-    }
-}
-
-
-inline void
-load_features(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix, std::string query_file_path, std::string feature_file_path){
-    std::ifstream vt_file(query_file_path);
-    if (vt_file.good() == false) {
-        printf("File Not Exists.\n");
-        exit(1);
-    }
-    for (VertexIdType sid; (vt_file >> sid);) {
-        Vt_nodes.emplace_back(sid);
-    }
-    if (Vt_nodes.empty()) {
-        printf("Error. Empty File\n");
-    }
-    vt_file.close();
-
-    std::cout << "Loading feature... ";
-    std::vector<unsigned long> shape;
-    bool fortran_order;
-    std::vector<float> arr_np;
-    npy::LoadArrayFromNumpy(feature_file_path, shape, fortran_order, arr_np);
-    auto feature_data = arr_np.data();
-    int nrows = shape[0];   // node size
-    int ncols = shape[1];   // feature size
-    std::cout << nrows << ' ' << ncols << ' ' << Vt_nodes.size() << std::endl;
-    // feature_matrix = std::vector<std::vector<float>>(ncols,std::vector<float>(Vt_nodes.size()));
-
-    VertexIdType index = 0;
-    for(int row = 0; row <nrows; row ++){
-        if (row == Vt_nodes[index]) {
-            index++;
-            std::vector<float> feature_array(feature_data+row*ncols, feature_data+row*ncols+ncols);
-            feature_matrix.emplace_back(feature_array);
+    if ((idxf + 1) % spt_size == 0 || idx_feat + 1 == feat_num) {
+        std::string spt_path;
+        if (split_num == 1) {
+            spt_path = _out_path + ".npy";
+        } else {
+            spt_path = _out_path + "_" + std::to_string(spt) + ".npy";
         }
+        std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};
+        npy::SaveArrayAsNumpy(spt_path, false, res_shape.size(), res_shape.data(), out_matrix);
+        printf("SAVED: %s\n", spt_path.c_str());
     }
-    std::cout<<"Feature size: "<<feature_matrix.size()<<' '<<feature_matrix[0].size()<<std::endl;
 }
 
-inline void
-load_features10(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix, std::string query_file_path, std::string feature_file_path){
-    std::ifstream vt_file(query_file_path);
-    if (vt_file.good() == false) {
+
+inline unsigned int
+load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
+    std::ifstream query_file(query_path);
+    if (query_file.good() == false) {
         printf("File Not Exists.\n");
         exit(1);
     }
-    for (VertexIdType sid; (vt_file >> sid);) {
+    for (VertexIdType sid; (query_file >> sid);) {
         Vt_nodes.emplace_back(sid);
     }
     if (Vt_nodes.empty()) {
-        printf("Error. Empty File\n");
+        printf("Error! Empty File\n");
     }
-    vt_file.close();
+    query_file.close();
+    std::cout << "Query size: " << Vt_nodes.size() << std::endl;
+    return Vt_nodes.size();
+}
 
+inline void
+load_features(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix,
+    std::string feature_path, const unsigned int split_num) {
     std::cout << "Loading feature... " << Vt_nodes.size() << std::endl;
     VertexIdType index = 0;
     VertexIdType sumrow = 0;
@@ -227,18 +177,21 @@ load_features10(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<flo
     bool fortran_order;
     std::vector<float> arr_np;
     // feature_matrix = std::vector<std::vector<float>>(500,std::vector<float>(Vt_nodes.size()));
-    for (int spt = 0; spt < 10; spt ++) {
-        std::string spt_path = feature_file_path;
-        spt_path = spt_path.insert(feature_file_path.length() - 4, std::to_string(spt));
+
+    for (int spt = 0; spt < split_num; spt ++) {
+        std::string spt_path = feature_path;
+        if (split_num > 1) {
+            spt_path = spt_path.insert(feature_path.length() - 4, std::to_string(spt));
+        }
         shape.clear();
         arr_np.clear();
         npy::LoadArrayFromNumpy(spt_path, shape, fortran_order, arr_np);
         auto feature_data = arr_np.data();
-        int nrows = shape[0];   // node size
-        int ncols = shape[1];   // feature size
+        int nrows = shape[0];   // node num
+        int ncols = shape[1];   // feature num
         std::cout << nrows << ' ' << ncols << ' ' << Vt_nodes.size() << std::endl;
 
-        for(int row = 0; row <nrows; row ++){
+        for (int row = 0; row <nrows; row ++) {
             if (sumrow + row == Vt_nodes[index]) {
                 index++;
                 std::vector<float> feature_array(feature_data+row*ncols, feature_data+row*ncols+ncols);
@@ -253,7 +206,7 @@ load_features10(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<flo
 
 // ==================== Reuse
 inline double
-calc_left_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 1.0){
+calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 1.0){
     int index;
     // std::vector<int> used_index;
     double used_sum = 0;
@@ -344,8 +297,8 @@ calc_L2_distance(std::vector<double> &V1, std::vector<double> &V2){
 }
 
 inline void
-get_base_with_L1(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vector<double>> &base_matrix,
-                 std::vector<int> &base_vex, double base_ratio)
+get_base_with_norm(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vector<double>> &base_matrix,
+                   std::vector<int> &base_vex, double base_ratio)
 {
     std::vector<std::pair<int, double>> min_L1_counter(seed_matrix.size(), std::make_pair(0, 0));
     for (int i = 0; i < seed_matrix.size(); i++) {
@@ -380,7 +333,8 @@ get_base_with_L1(std::vector<std::vector<double >> &seed_matrix, std::vector<std
     }
 }
 
-inline std::vector<double> feature_reuse(std::vector<double> &raw_seed, std::vector<std::vector<double >> &base_matrix){
+inline std::vector<double>
+feature_reuse(std::vector<double> &raw_seed, std::vector<std::vector<double >> &base_matrix){
     std::vector<double> base_weight(base_matrix.size(), 0.0);
     for(double delta = 1; delta <= 16; delta *= 2){
         double L1_dis_min = base_matrix.size();
@@ -392,7 +346,7 @@ inline std::vector<double> feature_reuse(std::vector<double> &raw_seed, std::vec
                 min_L1_idx = j;
             }
         }
-        double theta = calc_left_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
+        double theta = calc_L1_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
         if (abs(theta) / delta < 1 / 16) break;
         base_weight[min_L1_idx] += theta;
     }

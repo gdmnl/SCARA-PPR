@@ -1,5 +1,6 @@
 {
     "data": "ppi",
+    "path": "../data/",
     "algo": "featpush",
     "epochs": 1000,
     "patience": 100,
@@ -13,5 +14,7 @@
     "alpha": 0.3,
     "eps": 0.5,
     "rrz": 0.0,
-    "multil": true
+    "inductive": true,
+    "multil": true,
+    "spt": 1
 }

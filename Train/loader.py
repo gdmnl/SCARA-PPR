@@ -4,60 +4,29 @@ import scipy.sparse
 import sklearn
 import torch
 
-from data_processor import DataProcess
+from data_processor import DataProcess, diag_sp
 
 
-np.set_printoptions(linewidth=150, edgeitems=5,
+np.set_printoptions(linewidth=160, edgeitems=5,
                     formatter=dict(float=lambda x: "% 9.3e" % x))
+torch.set_printoptions(linewidth=160, edgeitems=5)
 
 
-def matnorm_adj(m, deg, norm, idx):
-    """PPR matrix normalization
-    """
-    if norm == 'sym':
-        # Assume undirected (symmetric) adjacency matrix
-        deg_sqrt = np.sqrt(np.maximum(deg, 1e-12))
-        deg_inv_sqrt = 1. / deg_sqrt
-
-        row, col = m.nonzero()
-        # assert np.all(deg[idx[row]] > 0)
-        # assert np.all(deg[col] > 0)
-        m.data = deg_sqrt[idx[row]] * m.data * deg_inv_sqrt[col]
-    elif norm == 'col':
-        # Assume undirected (symmetric) adjacency matrix
-        deg_inv = 1. / np.maximum(deg, 1e-12)
-
-        row, col = m.nonzero()
-        # assert np.all(deg[idx[row]] > 0)
-        # assert np.all(deg[col] > 0)
-        m.data = deg[idx[row]] * m.data * deg_inv[col]
-    elif norm == 'row':
-        pass
-    else:
-        raise ValueError(f"Unknown PPR normalization: {norm}")
+def lmatstd(m):
+    """Large matrix standardization"""
+    rowh = m.shape[0] // 2
+    std = np.std(m[:rowh], axis=0)
+    m[:rowh] /= std
+    m[rowh:] /= std
+    gc.collect()
     return m
 
 
-def matnorm_inf(m, axis=0):
-    """L_inf normalization of matrix, scale to [0, 1] and sum of column is 1
-    """
-    m = m - m.min(axis=axis)
-    m = m / m.sum(axis=axis)
-    return m
-
-
-def matstd(m):
-    if scipy.sparse.issparse(m):
-        scaler = sklearn.preprocessing.StandardScaler(with_mean=False)
-    else:
-        scaler = sklearn.preprocessing.StandardScaler()
-    m = scaler.fit_transform(m)
-    return m
-
-
-def matstd_clip(m):
-    scaler = sklearn.preprocessing.StandardScaler()
-    scaler.fit(m[1:, :])
+def lmatstd_clip(m, with_mean=False):
+    """Large matrix standardization with clipping"""
+    rowh = m.shape[0] // 10
+    scaler = sklearn.preprocessing.StandardScaler(with_mean=with_mean)
+    scaler.fit(m[rowh:2*rowh, :])
     mean = scaler.mean_
     std = scaler.scale_
     k = 3
@@ -66,203 +35,102 @@ def matstd_clip(m):
     return m
 
 
-def diag_sp(diag):
-    """scipy sparse diagonal matrix"""
-    n = len(diag)
-    return scipy.sparse.dia_matrix((diag, [0]), shape=(n, n))
-
-
-def reserr_d2rmax(drmax, deg, rrz):
-    """
-    Convert absolute error drmax to rmax in GBP.
-    Here use the max degree as d(s).
-
-    Args:
-        drmax (float): absolute error, i.e. d(s)^rrz * rmax
-        deg (np.array): degree array
-        rrz (float): exponent r
-    Returns:
-        rmax (float): absolute error
-    """
-    d_max = np.max(deg)
-    d_max = np.power(d_max, rrz)
-    rmax = drmax / d_max
-    return rmax
+def diag_mul(diag, m):
+    """Diagonal matrix multiplication"""
+    row = m.shape[0]
+    for i in range(row):
+        m[i] *= diag[i]
+    return m
 
 
 # ====================
-def load_data(algo, datastr, *args, **kwargs):
-    if 'paper' in datastr:
-        return load_paper(*args, datastr=datastr, **kwargs)
-    elif 'mag' in datastr:
-        return load_paper(*args, datastr=datastr, **kwargs)
-    elif datastr in ['ppi', 'yelp', 'amazon', 'products']:
-        return load_inductive_data(*args, datastr=datastr, **kwargs)
-    else:
-        raise load_transductive_data(*args, datastr=datastr, **kwargs)
-
-
-def load_transductive_data(algo, datastr, alpha, eps, rrz, seed=0):
+def load_data(algo: str, datastr: str, datapath: str,
+              inductive: bool, multil: bool, spt: int,
+              alpha: float, eps: float, rrz: float, seed: int=0):
     print('-' * 20)
     print("Start loading...")
-    processor = DataProcess(datastr, rrz=rrz, seed=seed)
+    # Get degree and label
+    processor = DataProcess(datastr, path=datapath, rrz=rrz, seed=seed)
     processor.input(['deg', 'labels'])
-    processor.calculate(['idx_train'])
+    deg = processor.deg
+    if multil:
+        processor.calculate(['labels_oh'])
+        labels = torch.LongTensor(processor.labels_oh)
+        labels = labels.float()
+    else:
+        labels = torch.LongTensor(processor.labels)
+    # Get index
+    if inductive:
+        processor.input(['idx_train', 'idx_val', 'idx_test'])
+    else:
+        processor.calculate(['idx_train'])
+    idx = {'train': torch.LongTensor(processor.idx_train),
+           'val': torch.LongTensor(processor.idx_val),
+           'test': torch.LongTensor(processor.idx_test)}
     # Get graph property
     n, m = processor.n, processor.m
-    deg = processor.deg
-    labels = torch.LongTensor(processor.labels)
-    # Get index
-    idx_train = torch.LongTensor(processor.idx_train)
-    idx_val = torch.LongTensor(processor.idx_val)
-    idx_test = torch.LongTensor(processor.idx_test)
 
-    # Get topk P
-    ppr_file = f'../save/{datastr}/{algo}/{seed}'
-    file_weights = f'{ppr_file}/score_{eps:g}.npy'
-    weights = np.load(file_weights)
-    features = weights
-    features = features.transpose()             # shape [n, F]
-
-    # Compute features
-    deg_pow = np.power(np.maximum(deg, 1e-12), rrz - 1)
-    deg_pow = diag_sp(deg_pow)
-    features = deg_pow @ features               # shape [n, F]
-    print('-' * 20)
-    print(features[:5, :])
-    print(features[idx_train, :])
-    features = matstd_clip(features)
-    # print(features[:5, :])
-    # print(features[idx_train, :])
-    features = torch.FloatTensor(features)
-    features_train = features[idx_train]
-    features_val = features[idx_val]
-    features_test = features[idx_test]
-    del features
-    gc.collect()
-
-    print("n={}, m={}, F={}".format(n, m, features.size()))
-    print(labels.size(), labels)
-    print(idx_train.size(), idx_val.size(), idx_test.size(), idx_train[:10])
-    return features_train, features_val, features_test, labels, idx_train, idx_val, idx_test
-
-
-def load_inductive_data(algo, datastr, alpha, eps, rrz, seed=0):
-    print('-' * 20)
-    print("Start loading...")
-    processor = DataProcess(datastr, rrz=rrz, seed=seed)
-    processor.input(['deg', 'labels', 'idx_train', 'idx_val', 'idx_test'])
-    processor.calculate(['labels_oh'])
-    # Get graph property
-    n, m = processor.n, processor.m
-    deg = processor.deg
-    labels = torch.LongTensor(processor.labels_oh)
-    # Get index
-    idx_train = torch.LongTensor(processor.idx_train)
-    idx_val = torch.LongTensor(processor.idx_val)
-    idx_test = torch.LongTensor(processor.idx_test)
-
-    print('-' * 20)
-    def precompute(ds, idx=None):
-        # Get topk P
-        ppr_file = f'../save/{datastr}/{ds}/{seed}'
-        file_weights = f'{ppr_file}/score_{eps:g}.npy'
-        weights = np.load(file_weights)
-        features = weights
-        features = features.transpose()             # shape [n, F]
-        if idx is None:
-            degree = deg
+    # Precompute integration
+    def precompute(algo_i):
+        # Load embedding
+        est_dir = f'../save/{datastr}/{algo_i}/{seed}'
+        if spt == 1:
+            feat_file = f'{est_dir}/score_{alpha:g}_{eps:g}.npy'
+            features = np.load(feat_file)
         else:
-            features = features[idx]
-            degree = deg[idx]
+            # features = scipy.sparse.lil_matrix((200, n), dtype=np.float32)
+            features = None
+            for i in range(spt):
+                feat_file = f'{est_dir}/score_{alpha:g}_{eps:g}_{i}.npy'
+                features_spt = np.load(feat_file)
+                if features is None:
+                    features = features_spt.astype(np.float32)
+                else:
+                    np.concatenate((features, features_spt), axis=0, out=features, dtype=np.float32)
+                print(f'  Split {i} loaded, now shape: {features.shape}')
+        features = features.transpose()                 # shape [n, F]
 
-        # Compute features
-        deg_pow = np.power(np.maximum(degree, 1e-12), rrz - 1)
-        deg_pow = diag_sp(deg_pow)
-        features = deg_pow @ features               # shape [n, F]
-        features = matstd_clip(features)
+        # Process degree
+        if algo_i.endswith('_train'):
+            processor_i = DataProcess(datastr+'_train', path=datapath, rrz=rrz, seed=seed)
+            processor_i.input(['deg'])
+            deg_i = processor_i.deg
+        else:
+            deg_i = deg
+        idx_zero = np.where(deg_i == 0)[0]
+        if len(idx_zero) > 0:
+            print(f"Warning: {len(idx_zero)} isolated nodes found: {idx_zero}!")
+        deg_pow = np.power(np.maximum(deg_i, 1e-12), rrz - 1)
+        deg_pow[idx_zero] = 0
+
+        # Normalize embedding by degree
+        if spt == 1:
+            deg_pow = diag_sp(deg_pow)
+            features = deg_pow @ features               # shape [n, F]
+            features = lmatstd_clip(features)
+        else:
+            features = diag_mul(deg_pow, lmatstd(features))
+            features = lmatstd_clip(features)
         return features
 
-    features = precompute(f'{algo}', idx=None)
-    features_train = precompute(f'{algo}_train', idx=idx_train)
-    print(features_train[:5, :])
-    print(features[idx_train, :])
-    print(features[-5:, :])
-    features = torch.FloatTensor(features)
-    features_train = torch.FloatTensor(features_train)
-    features_val = features[idx_val]
-    features_test = features[idx_test]
-    del features
+    # Assign features
+    features = precompute(f'{algo}')
+    feat = {'val': torch.FloatTensor(features[idx['val']]),
+            'test': torch.FloatTensor(features[idx['test']])}
+    if inductive:
+        features_train = precompute(f'{algo}_train')
+        feat['train'] = torch.FloatTensor(features_train)
+        del features, features_train
+    else:
+        feat['train'] = torch.FloatTensor(features[idx['train']])
+        del features
     gc.collect()
 
-    print("n={}, m={}, F_t={}, F={}".format(n, m, features_train.size(), features.size()))
+    print('train head ', idx['train'][:5])
+    print(features[idx['train'][:5], :])
+    print('test head ', idx['test'][:5])
+    print(features[idx['test'][:5], :])
+    print(f"n={n}, m={m}, F_t={feat['train'].size()}")
     print(labels.size(), labels)
-    print(idx_train.size(), idx_val.size(), idx_test.size(), idx_train[:10])
-    return features_train, features_val, features_test, labels, idx_train, idx_val, idx_test
-
-
-def load_paper(algo, datastr, alpha, eps, rrz, seed=0):
-    def diag_mul(m, diag):
-        row = m.shape[0]
-        for i in range(row):
-            m[i] *= diag[i]
-        return m
-
-    def lmatstd(m):
-        rowh = m.shape[0] // 2
-        std = np.std(m[:rowh], axis=0)
-        m[:rowh] /= std
-        m[rowh:] /= std
-        gc.collect()
-        return m
-
-    def lmatstd_clip(m, idx):
-        std = np.std(m[idx[2]], axis=0)
-        k = 5
-        for i in range(m.shape[0]):
-            m[i] = np.clip(m[i], a_min=-k*std, a_max=k*std) / std
-        gc.collect()
-        return m
-
-    print('-' * 20)
-    print("Start loading...")
-    processor = DataProcess(datastr, rrz=rrz, seed=seed)
-    processor.input(['deg', 'labels'])
-    processor.calculate(['idx_train'])
-    # Get graph property
-    n, m = processor.n, processor.m
-    deg = processor.deg
-    labels = torch.LongTensor(processor.labels)
-    # Get index
-    idx_train = torch.LongTensor(processor.idx_train)
-    idx_val = torch.LongTensor(processor.idx_val)
-    idx_test = torch.LongTensor(processor.idx_test)
-    idx_all = np.concatenate((idx_train, idx_val, idx_test))
-    idx_all = np.sort(idx_all)
-    idx_all = torch.LongTensor(idx_all)
-
-    # Get topk P
-    ppr_file = f'../save/{datastr}/{algo}/{seed}'
-    file_weights = f'{ppr_file}/score_{eps:g}.npy'
-    weights = np.load(file_weights)
-    features = scipy.sparse.csr_matrix((128, n), dtype=np.float32)
-    features[idx_all] = weights
-    features = features.transpose()             # shape [n, F]
-    del weights
-    gc.collect()
-
-    # Compute features
-    deg_pow = np.power(np.maximum(deg, 1e-12), rrz - 1)
-    features = diag_mul(lmatstd(features), deg_pow)
-    print('-' * 20)
-    print(features[:5, :])
-    print(features[idx_train, :])
-    features = lmatstd_clip(features, idx_all)
-    # print(features[:5, :])
-    # print(features[idx_train, :])
-    features = torch.FloatTensor(features)
-
-    print("n={}, m={}, F={}".format(n, m, features.size()))
-    print(labels.size(), labels)
-    print(idx_train.size(), idx_val.size(), idx_test.size(), idx_train[:10])
-    return features, labels, idx_train, idx_val, idx_test
+    print(idx['train'].size(), idx['val'].size(), idx['test'].size())
+    return feat, labels, idx

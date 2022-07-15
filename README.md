@@ -1,6 +1,15 @@
 # SCARA-PPR
 This is the original code for *SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization*
 
+[GitHub](https://github.com/gdmnl/SCARA-PPR) |
+[Tech Report](https://sites.google.com/view/scara-techreport)
+
+**Reference Format:**
+```
+Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
+SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization. PVLDB, 15(11): XXX-XXX, 2022.
+```
+
 ## Baselines
 * GraphSAINT: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)
 * APPNP: [APPNP](https://github.com/benedekrozemberczki/APPNP)
@@ -19,6 +28,18 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
 * MAG: [PANE](https://renchi.ac.cn/datasets/)
 
 ## Usage
+
+### Data Preparation
+* Path: `data/[dataset_name]`
+* `adj.txt`: adjacency table
+  * First line: "`# [number of nodes]`"
+* `degrees.npz`: node degrees in .npz 'arr_0'
+* `feats_norm.npz`: normalized features in .npz 'arr_0' uncompressed
+  * Large matrix can be split
+* `labels.npz`: node label information
+  * 'label': labels (number or one-hot)
+  * 'idx_train/idx_val/idx_test': indices of training/validation/test nodes
+* `query.txt`: indices of query nodes
 
 ### Precompute
 1. Requirements: CMake 3.16, C++ 11

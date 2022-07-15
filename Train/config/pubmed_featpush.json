@@ -1,5 +1,6 @@
 {
     "data": "pubmed",
+    "path": "../data/",
     "algo": "featpush",
     "epochs": 1000,
     "patience": 100,
@@ -12,5 +13,6 @@
     "bias": "none",
     "alpha": 0.1,
     "eps": 8,
-    "rrz": 0.5
+    "rrz": 0.5,
+    "spt": 1
 }
