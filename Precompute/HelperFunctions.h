@@ -122,7 +122,7 @@ inline void output_vector(std::vector<T> Vec, std::string filename){
 
 template<class FLOAT_TYPE>
 inline void
-output_matrix(const std::vector<FLOAT_TYPE> &_value_vec, std::vector<float> &out_matrix,
+output_feature(const std::vector<FLOAT_TYPE> &_value_vec, std::vector<float> &out_matrix,
     const std::string &_out_path, const unsigned int split_num,
     const unsigned long idx_feat, const unsigned long feat_num, const VertexIdType &_node_num) {
     // Decide split
@@ -168,7 +168,7 @@ load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
 }
 
 inline void
-load_features(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix,
+load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix,
     std::string feature_path, const unsigned int split_num) {
     std::cout << "Loading feature... " << Vt_nodes.size() << std::endl;
     VertexIdType index = 0;

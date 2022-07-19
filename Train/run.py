@@ -1,6 +1,4 @@
 # Ref: https://github.com/chennnM/GBP
-import gc
-from pyexpat import features
 import time
 import random
 import argparse

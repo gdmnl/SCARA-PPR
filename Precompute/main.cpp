@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
         std::vector<VertexIdType> Vt_nodes; // list of queried nodes
         std::vector<std::vector<float>> feature_matrix;
         unsigned int node_num = load_query(Vt_nodes, param.query_file);
-        load_features(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
+        load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
         class SpeedPPR speedPPR(graph);
         double total_time = 0;
         double time_start;
@@ -93,9 +93,9 @@ int main(int argc, char **argv) {
             if (param.output_estimations) {
                 std::stringstream res_file;
                 res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon;
-                output_matrix(whole_graph_structure.means, out_matrix,
-                              res_file.str(), param.split_num,
-                              i, feat_num, node_num);
+                output_feature(whole_graph_structure.means, out_matrix,
+                               res_file.str(), param.split_num,
+                               i, feat_num, node_num);
             }
         }
 
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
         std::vector<VertexIdType> Vt_nodes;
         std::vector<std::vector<float>> feature_matrix;
         unsigned int node_num = load_query(Vt_nodes, param.query_file);
-        load_features(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
+        load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
         class SpeedPPR speedPPR(graph);
         double total_time = 0;
         double time_start;
@@ -138,8 +138,8 @@ int main(int argc, char **argv) {
         SpeedPPR::WHOLE_GRAPH_STRUCTURE<double> whole_graph_structure(graph.getNumOfVertices());
         std::vector<std::vector<double>> base_result;
         graph.fill_dead_end_neighbor_with_id();
-        double avg_tht = 0;
-        double avg_res = 0;
+        double avg_tht = 0; // base theta
+        double avg_res = 0; // reuse residue
         int valid_feat_num = 0;
 
         for(int i = 0; i < base_matrix.size(); i++){
@@ -204,9 +204,9 @@ int main(int argc, char **argv) {
             if (param.output_estimations) {
                 std::stringstream res_file;
                 res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon;
-                output_matrix(whole_graph_structure.means, out_matrix,
-                              res_file.str(), param.split_num,
-                              i, feat_num, node_num);
+                output_feature(whole_graph_structure.means, out_matrix,
+                               res_file.str(), param.split_num,
+                               i, feat_num, node_num);
             }
         }
 
