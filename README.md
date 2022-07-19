@@ -4,10 +4,24 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
 [GitHub](https://github.com/gdmnl/SCARA-PPR) |
 [Tech Report](https://sites.google.com/view/scara-techreport)
 
-**Reference Format:**
+**Citation**
+
+If you find this work useful, please cite our paper:
 ```
 Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
 SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization. PVLDB, 15(11): XXX-XXX, 2022.
+```
+```
+@article{liao2022scara,
+  title={SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization},
+  author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
+  journal={Proceedings of the VLDB Endowment},
+  volume={15},
+  number={11},
+  pages={XXX-XXX},
+  year={2022},
+  publisher={VLDB Endowment}
+}
 ```
 
 ## Usage
