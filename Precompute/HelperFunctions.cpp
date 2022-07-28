@@ -56,8 +56,8 @@ Param parseArgs(int nargs, char **args) {
     Param rtn;
     std::unordered_set<std::string> algo_set(Algorithms.begin(), Algorithms.end());
 
-    printf("%s\n", std::string(110, '=').c_str());
-    printf("The input parameters are:\n");
+    printf("%s\n", std::string(80, '-').c_str());
+    printf("Configs:\n");
     for (unsigned int cnt = 1; cnt < nargs;) {
         char *arg = args[cnt++];
         if (cnt == nargs) {
@@ -70,7 +70,8 @@ Param parseArgs(int nargs, char **args) {
             exit(0);
         }
         std::string para = getNextWord(arg + i + 1);
-        printf("-%s\n", para.c_str());
+        // printf("-%s\n", para.c_str());
+        printf("\t");
         arg = args[cnt++];
         if (para == "algo") {
             rtn.algorithm = std::string(arg);
@@ -111,7 +112,7 @@ Param parseArgs(int nargs, char **args) {
             printf("Estimation Folder: %s\n", rtn.estimation_folder.c_str());
         } else if (para == "feature_file") {
             rtn.feature_file = getNextWord(arg);
-            printf("Feature File: %s\n", rtn.estimation_folder.c_str());
+            printf("Feature File: %s\n", rtn.feature_file.c_str());
         } else if (para == "split_num") {
             rtn.split_num = std::stoi(getNextWord(arg));
             printf("Number of Split: %d\n", rtn.split_num);
@@ -132,7 +133,7 @@ Param parseArgs(int nargs, char **args) {
             exit(0);
         }
     }
-    printf("%s\n", std::string(110, '-').c_str());
+    printf("%s\n", std::string(80, '-').c_str());
     /*****************************************************************************/
     return rtn;
 }

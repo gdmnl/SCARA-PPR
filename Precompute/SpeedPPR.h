@@ -101,7 +101,7 @@ public:
         }
         double time_end = getCurrentTime();
         num_of_walks_per_second = num_of_walks / (time_end - time_start);
-        MSG(num_of_walks_per_second)
+        MSG(num_of_walks)
         graph.reset_set_dummy_neighbor();
     }
 

@@ -27,27 +27,30 @@ PVLDB, 15(11): 3240-3248, 2022.
 ```
 
 ## Usage
+See [demo notebook](demo.ipynb) for a full example.
 
 ### Data Preparation
-* Path: `data/[dataset_name]`
-* `adj.txt`: adjacency table
-  * First line: "`# [number of nodes]`"
-* `degrees.npz`: node degrees in .npz 'arr_0'
-* `feats_norm.npz`: normalized features in .npz 'arr_0' uncompressed
-  * Large matrix can be split
-* `labels.npz`: node label information
-  * 'label': labels (number or one-hot)
-  * 'idx_train/idx_val/idx_test': indices of training/validation/test nodes
-* `query.txt`: indices of query nodes
+1. Download data (links [below](https://github.com/gdmnl/SCARA-PPR#dataset-link)) in GBP format to path `data/[dataset_name]`. There are three files:
+  * `adj.txt`: adjacency table
+    * First line: "`# [number of nodes]`"
+  * `feats.npy`: features in .npy array
+  * `labels.npz`: node label information
+    * 'label': labels (number or one-hot)
+    * 'idx_train/idx_val/idx_test': indices of training/validation/test nodes (inductive task)
+2. Run python `python data_processor.py` to generate additional processed files:
+  * `degrees.npz`: node degrees in .npz 'arr_0'
+  * `feats_norm.npy`: normalized features in .npy array
+    * Large matrix can be split
+  * `query.txt`: indices of queried nodes
 
 ### Precompute
 1. Environment: CMake 3.16, C++ 11. Dependencies (already included): [fast_double_parser](https://github.com/lemire/fast_double_parser), [SFMT](https://github.com/MersenneTwister-Lab/SFMT), [libnpy](https://github.com/llohse/libnpy/)
 2. CMake `cmake -B build`, then `make`
-3. Run script `./run_reddit.sh`
+3. Run script `./run_pubmed.sh`
 
 ### Train and Test
-1. Install dependencies: `conda create --name <envname> --file requirements.txt`
-2. Run python `python run.py`
+1. Install dependencies: `conda create --name [envname] --file requirements.txt`
+2. Run python `python -u run.py -f [seed] -c [config_file] -v [device]`
 
 ## Baseline Models
 * GraphSAINT: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)

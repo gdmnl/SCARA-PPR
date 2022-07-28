@@ -226,7 +226,7 @@ public:
             printf("%s\n", graph_bin_file.c_str());
             exit(1);
         }
-        printf("%s\n", std::string(110, '=').c_str());
+        printf("%s\n", std::string(80, '-').c_str());
     }
 
 };

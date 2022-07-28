@@ -84,9 +84,7 @@ def train(ld=loader_train):
     return np.mean(loss_list), time_epoch
 
 
-def eval(ld, load_best=False):
-    if load_best:
-        model = model_logger.load_model('best')
+def eval(ld):
     model.eval()
     micro, num_total = 0, 0
     with torch.no_grad():
@@ -136,14 +134,15 @@ for epoch in range(args.epochs):
     if conv_epoch == args.patience:
         break
 
-acc_train = eval(ld=loader_train, load_best=True)
+model = model_logger.load_model('best')
+acc_train = eval(ld=loader_train)
 print(f"Train time cost: {train_time:0.4f}")
 print(f"Train best acc: {acc_train:0.4f}, Val best acc: {model_logger.acc_best:0.4f}")
 
 print('-' * 20)
 # print("Start inference...")
 start = time.time()
-acc_test = eval(ld=loader_test, load_best=True)
+acc_test = eval(ld=loader_test)
 time_inference = time.time() - start
 memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 print(f"Test time cost: {time_inference:0.4f}, Memory: {memory / 2**20:.3f}GB")

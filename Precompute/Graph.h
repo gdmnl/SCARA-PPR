@@ -267,7 +267,8 @@ public:
                 out_neighbors_lists[out_position] = to_id;
                 position_pair.emplace_back(to_id, out_position);
                 ++out_position;
-                // if (++edges_processed % msg_gap == 0) {
+                ++edges_processed;
+                // if (edges_processed % msg_gap == 0) {
                 //     printf("%u edges processed.\n", edges_processed);
                 // }
             }
@@ -304,7 +305,7 @@ public:
         }
         const double time_end = getCurrentTime();
         // printf("Graph Build Finished. TIME: %.4f\n", time_end - start);
-        printf("%s\n", std::string(110, '-').c_str());
+        printf("%s\n", std::string(80, '-').c_str());
     }
 
     void show() const {
@@ -344,7 +345,7 @@ public:
                     std::vector<VertexIdType>(deadend_vertices.data(),
                                               deadend_vertices.data() +
                                               std::min(num_deadend_vertices, 50u)));
-        printf("\n%s\n", std::string(120, '=').c_str());
+        printf("\n%s\n", std::string(80, '-').c_str());
     }
 };
 

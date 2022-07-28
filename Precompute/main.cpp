@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        printf("Mem: %ld\n", get_proc_memory());
+        printf("Mem: %ld MB\n", get_proc_memory()/1000);
         printf("Total Time: %.6f, Average: %.12f\n", total_time, total_time / feat_num);
     } else if (param.algorithm == "featreuse"){
         std::vector<VertexIdType> Vt_nodes;
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
             total_time += time_end - time_start;
             base_result.push_back(whole_graph_structure.means);
         }
-        printf("Time Used on Base %.12f\n", total_time);
+        printf("Time Used on Base %.6f\n", total_time);
 
         // Calculate residue PPR
         for (int i = 0; i < seed_matrix.size(); i++) {
@@ -190,8 +190,9 @@ int main(int argc, char **argv) {
         MSG(avg_tht);
         MSG(avg_res);
         MSG(re_feat_num);
-        printf("Mem: %ld\n", get_proc_memory());
+        printf("Mem: %ld MB\n", get_proc_memory()/1000);
         printf("Total Time: %.6f, Average: %.12f\n", total_time, total_time / feat_num);
     }
+    printf("%s\n", std::string(80, '-').c_str());
     return 0;
 }

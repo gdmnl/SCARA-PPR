@@ -186,7 +186,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
         auto feature_data = arr_np.data();
         int nrows = shape[0];   // node num
         int ncols = shape[1];   // feature num
-        std::cout << nrows << ' ' << ncols << ' ' << Vt_nodes.size() << std::endl;
+        std::cout<<"Input shape: "<<nrows<<" "<<ncols<<std::endl;
 
         for (int row = 0; row <nrows; row ++) {
             if (sumrow + row == Vt_nodes[index]) {
@@ -198,7 +198,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
         sumrow += nrows;
         // std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
     }
-    std::cout<<"Feature size: "<<feature_matrix.size()<<' '<<feature_matrix[0].size()<<std::endl;
+    std::cout<<"Feature size: "<<feature_matrix.size()<<" "<<feature_matrix[0].size()<<std::endl;
 }
 
 // ==================== Reuse
@@ -303,7 +303,7 @@ get_base_with_norm(std::vector<std::vector<double >> &seed_matrix, std::vector<s
         int min_L1_idx = -1;
         for (int j = 0; j < seed_matrix.size(); j++) {
             if(i!=j){
-                double L1_dis = calc_L1_distance(seed_matrix[i], seed_matrix[j]);
+                double L1_dis = calc_L2_distance(seed_matrix[i], seed_matrix[j]);
                 if (L1_dis_min > L1_dis){
                     L1_dis_min = L1_dis;
                     min_L1_idx = j;
@@ -335,16 +335,16 @@ feature_reuse(std::vector<double> &raw_seed, std::vector<std::vector<double >> &
     std::vector<double> base_weight(base_matrix.size(), 0.0);
     for(double delta = 1; delta <= 16; delta *= 2){
         double L1_dis_min = base_matrix.size();
-        int min_L1_idx;
+        int min_L1_idx = 0;
         for(int j = 0; j < base_matrix.size(); j++){
-            double L1_dis = calc_L1_distance(raw_seed, base_matrix[j]);
+            double L1_dis = calc_L2_distance(raw_seed, base_matrix[j]);
             if(L1_dis_min > L1_dis){
                 L1_dis_min = L1_dis;
                 min_L1_idx = j;
             }
         }
-        double theta = calc_L1_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
-        if (abs(theta) / delta < 1 / 16) break;
+        double theta = calc_L2_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
+        if (abs(theta) / delta < 1 / 128) break;
         base_weight[min_L1_idx] += theta;
     }
     return base_weight;

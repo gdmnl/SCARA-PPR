@@ -102,8 +102,8 @@ class DataProcess(object):
         self.labels_path = self._get_path('labels.npz')
         self.query_path = self._get_path('query.txt')
         self.querytrain_path = self._get_path('query_train.txt')
-        self.feats_path = self._get_path('feats.npz')
-        self.featsnorm_path = self._get_path('feats_norm.npz')
+        self.feats_path = self._get_path('feats.npy')
+        self.featsnorm_path = self._get_path('feats_norm.npy')
 
         self.adj_matrix = None
         self.deg = None
@@ -259,9 +259,9 @@ class DataProcess(object):
             elif key == 'idx_test':
                 self.idx_test = dict(np.load(self.labels_path, allow_pickle=True))['idx_test']
             elif key == 'attr_matrix':
-                self.attr_matrix = dict(np.load(self.feats_path))['arr_0']
+                self.attr_matrix = np.load(self.feats_path)
             elif key == 'attr_matrix_norm':
-                self.attr_matrix_norm = dict(np.load(self.featsnorm_path))['arr_0']
+                self.attr_matrix_norm = np.load(self.featsnorm_path)
             else:
                 print("Key not exist: {}".format(key))
 
@@ -277,6 +277,7 @@ class DataProcess(object):
                     f.write("# {:d}\n".format(self.n))
                     for i in range(self.m):
                         f.write("{:d} {:d}\n".format(self.adj_matrix.row[i], self.adj_matrix.col[i]))
+                self.adj_matrix = self.adj_matrix.tocsr()
             elif key == 'deg':
                 np.savez_compressed(self.degree_path, self.deg)
             elif key in ['labels', 'idx_train', 'idx_val', 'idx_test']:
@@ -293,10 +294,10 @@ class DataProcess(object):
                 np.savetxt(self.querytrain_path, self.idx_train, fmt='%d', delimiter='\n')
             elif key == 'attr_matrix':
                 self.attr_matrix = self.attr_matrix.astype(np.float32)
-                np.savez_compressed(self.feats_path, self.attr_matrix)
+                np.save(self.feats_path, self.attr_matrix)
             elif key == 'attr_matrix_norm':
                 self.attr_matrix_norm = self.attr_matrix_norm.astype(np.float32)
-                np.savez_compressed(self.featsnorm_path, self.attr_matrix_norm)
+                np.save(self.featsnorm_path, self.attr_matrix_norm)
             else:
                 print("Key not exist: {}".format(key))
 
@@ -316,3 +317,11 @@ class DataProcess(object):
             prt_path = self._get_path('{}{}.npz'.format(name, i))
             np.savez(prt_path, prt)
         print(n, ttl)
+
+
+if __name__ == '__main__':
+    processor = DataProcess('pubmed', seed=0)
+    processor.input(['adjtxt', 'attr_matrix', 'labels'])
+    processor.calculate(['deg', 'idx_train', 'attr_matrix_norm'])
+    processor.output(['deg', 'query', 'attr_matrix_norm'])
+    print(processor)
