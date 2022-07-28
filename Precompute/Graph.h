@@ -186,7 +186,7 @@ public:
             exit(1);
         }
         const auto end = getCurrentTime();
-        printf("Time Used For Loading BINARY : %.2f\n", end - start);
+        // printf("Time Used For Loading BINARY : %.2f\n", end - start);
 
         // read the edges
         // the ids must be in the range from [0 .... the number of vertices - 1];
@@ -267,14 +267,13 @@ public:
                 out_neighbors_lists[out_position] = to_id;
                 position_pair.emplace_back(to_id, out_position);
                 ++out_position;
-                if (++edges_processed % msg_gap == 0) {
-                    printf("%u edges processed.\n", edges_processed);
-                }
+                // if (++edges_processed % msg_gap == 0) {
+                //     printf("%u edges processed.\n", edges_processed);
+                // }
             }
         }
         edges.clear();
         MSG(edges_processed);
-        printf("%s\n", std::string(30, '-').c_str());
 #ifdef USE_REVERSE_POS
         std::vector<VertexIdType> in_positions_to_fill(start_pos_in_appearance_pos_lists.begin(),
                                                        start_pos_in_appearance_pos_lists.end());
@@ -283,7 +282,6 @@ public:
         std::sort(position_pair.begin(), position_pair.end(), std::less<>());
         const double time_sort_end = getCurrentTime();
 //        MSG(time_sort_end - time_sort_start);
-        printf("%s\n", std::string(30, '-').c_str());
         appearance_pos_lists.clear();
         appearance_pos_lists.resize(numOfEdges + num_deadend_vertices + degree_max, 0);
         uint32_t in_pos_pair = 0;
@@ -294,9 +292,9 @@ public:
             assert(in_position < in_positions_to_fill[to_id + 1]);
             appearance_pos_lists[in_position] = pos;
             ++in_position;
-            if (++in_pos_pair % msg_gap == 0) {
-                MSG(in_pos_pair);
-            }
+            // if (++in_pos_pair % msg_gap == 0) {
+            //     MSG(in_pos_pair);
+            // }
         }
 #endif
 
@@ -304,31 +302,9 @@ public:
         for (const VertexIdType &id : deadend_vertices) {
             out_neighbors_lists[out_positions_to_fill[id]++] = dummy_id;
         }
-
-#ifdef DEBUG_MODE
-//        show();
-        // sanity check
-//        std::memcpy(in_positions_to_fill.data(), start_pos_in_appearance_pos_lists.data(),
-//                    sizeof(VertexIdType) * numOfVertices);
-//        for (uint32_t index = 0; index < numOfEdges + num_deadend_vertices; ++index) {
-//            const VertexIdType id = out_neighbors_lists[index];
-//            if (id != numOfVertices) {
-//                VertexIdType &in_position = in_positions_to_fill[id];
-//                if (appearance_pos_lists[in_position] != index) {
-//                    printf("Error in " __FILE__  ", line %d, in position error.\n", __LINE__);
-//                    MSG(index);
-//                    MSG(id);
-//                    MSG(in_position);
-//                    exit(1);
-//                }
-//                ++in_position;
-//            }
-//        }
-#endif
         const double time_end = getCurrentTime();
-        printf("Graph Build Finished. TIME: %.4f\n", time_end - start);
+        // printf("Graph Build Finished. TIME: %.4f\n", time_end - start);
         printf("%s\n", std::string(110, '-').c_str());
-
     }
 
     void show() const {

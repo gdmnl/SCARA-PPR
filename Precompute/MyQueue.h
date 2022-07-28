@@ -24,11 +24,7 @@ private:
 public:
     explicit MyQueue(const VertexIdType &_numOfVertices) :
             mask(compute_queue_size(_numOfVertices) - 1),
-            queue(mask + 2u, 0) {
-#ifdef DEBUG_MODE
-//        std::cout << "Queue Size: " << queue.size() << " Mask: " << mask << std::endl;
-#endif
-    }
+            queue(mask + 2u, 0) {}
 
     inline void clear() {
         idx_front = 0;
@@ -59,10 +55,6 @@ public:
     }
 
     inline bool empty() const {
-#ifdef DEBUG_MODE
-        assert(num != 0 || idx_last_plus_one == idx_front);
-        assert(num == 0 || idx_last_plus_one != idx_front);
-#endif
         return idx_last_plus_one == idx_front;
     }
 };

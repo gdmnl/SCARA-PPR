@@ -1,12 +1,6 @@
-# -*- coding:utf-8 -*-
-""" Convert data
-Author: nyLiao
-File Created: 2021-12-01
-File: data_processor.py
-"""
 import os
 import numpy as np
-import scipy.sparse
+import scipy.sparse as sp
 import sklearn.preprocessing
 
 
@@ -18,7 +12,7 @@ NVAL_PER_CLASS = NTRAIN_PER_CLASS * 10
 def diag_sp(diag):
     """Diagonal array to scipy sparse diagonal matrix"""
     n = len(diag)
-    return scipy.sparse.dia_matrix((diag, [0]), shape=(n, n))
+    return sp.dia_matrix((diag, [0]), shape=(n, n))
 
 
 def matstd(m, with_mean=False):
@@ -242,7 +236,7 @@ class DataProcess(object):
     def input(self, lst):
         for key in lst:
             if key == 'adjnpz':
-                self.adj_matrix = scipy.sparse.load_npz(self.adjnpz_path)
+                self.adj_matrix = sp.load_npz(self.adjnpz_path)
             elif key == 'adjtxt':
                 with open(self.adjtxt_path, 'r') as attr_f:
                     nline = attr_f.readline().rstrip()
@@ -250,7 +244,7 @@ class DataProcess(object):
                 adjtxt = np.loadtxt(self.adjtxt_path)
                 self._m = adjtxt.shape[0]
                 ones = np.ones((self.m), dtype=np.int8)
-                self.adj_matrix = scipy.sparse.coo_matrix(
+                self.adj_matrix = sp.coo_matrix(
                     (ones, (adjtxt[:, 0], adjtxt[:, 1])),
                     shape=(self.n, self.n))
                 self.adj_matrix = self.adj_matrix.tocsr()
@@ -275,8 +269,8 @@ class DataProcess(object):
         for key in lst:
             if key == 'adjnpz':
                 self.adj_matrix = self.adj_matrix.tocsr()
-                assert scipy.sparse.isspmatrix_csr(self.adj_matrix)
-                scipy.sparse.save_npz(self.adjnpz_path, self.adj_matrix)
+                assert sp.isspmatrix_csr(self.adj_matrix)
+                sp.save_npz(self.adjnpz_path, self.adj_matrix)
             elif key == 'adjtxt':
                 self.adj_matrix = self.adj_matrix.tocoo()
                 with open(self.adjtxt_path, 'w') as f:

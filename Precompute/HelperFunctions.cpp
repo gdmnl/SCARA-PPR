@@ -50,7 +50,7 @@ Param param;
 
 Param parseArgs(int nargs, char **args) {
     std::vector<std::string> Algorithms{
-            "CLEAN_GRAPH", "BUILD_INDEX", "FEATPUSH", "FEATREUSE",
+            "clean_graph", "featpush", "featreuse",
     };
 
     Param rtn;
@@ -85,17 +85,6 @@ Param parseArgs(int nargs, char **args) {
         } else if (para == "graph_binary") {
             rtn.graph_binary_file = getNextWord(arg);
             printf("Input Graph Binary File: %s\n", rtn.graph_binary_file.c_str());
-        } else if (para == "with_idx") {
-            auto option = getNextWord(arg);
-            if (option == "yes") {
-                rtn.with_idx = true;
-            } else if (option == "no") {
-                rtn.with_idx = false;
-            } else {
-                printf("Unknown option -%s!\n", option.c_str());
-                exit(0);
-            }
-            std::cout << "With Index: " << rtn.with_idx << "\n";
         } else if (para == "is_undirected") {
             auto option = getNextWord(arg);
             if (option == "yes") {
@@ -123,9 +112,6 @@ Param parseArgs(int nargs, char **args) {
         } else if (para == "feature_file") {
             rtn.feature_file = getNextWord(arg);
             printf("Feature File: %s\n", rtn.estimation_folder.c_str());
-        } else if (para == "index_file") {
-            rtn.index_file = getNextWord(arg);
-            printf("Output Index File: %s\n", rtn.index_file.c_str());
         } else if (para == "split_num") {
             rtn.split_num = std::stoi(getNextWord(arg));
             printf("Number of Split: %d\n", rtn.split_num);

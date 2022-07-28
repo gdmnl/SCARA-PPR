@@ -69,11 +69,10 @@ inline double parse_double(const std::string &_str, const size_t &_start, size_t
 struct Param {
     std::string graph_file;
     std::string query_file;
-    std::string index_file;
     std::string meta_file;
     std::string feature_file;
     std::string graph_binary_file;
-    std::string algorithm = "FEATPUSH";
+    std::string algorithm = "featpush";
     std::string output_folder;
     std::string estimation_folder;
     unsigned int split_num = 1;
@@ -81,7 +80,6 @@ struct Param {
     double alpha = 0.2;
     double gamma = 0.2;
     double base_ratio = 0.04;
-    bool with_idx = false;
     bool is_undirected_graph = false;
     bool output_estimations = false;
 };
@@ -144,7 +142,7 @@ output_feature(const std::vector<FLOAT_TYPE> &_value_vec, std::vector<float> &ou
         }
         std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};
         npy::SaveArrayAsNumpy(spt_path, false, res_shape.size(), res_shape.data(), out_matrix);
-        printf("SAVED: %s\n", spt_path.c_str());
+        printf("Feature saved: %s\n", spt_path.c_str());
     }
 }
 
@@ -170,7 +168,6 @@ load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
 inline void
 load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix,
     std::string feature_path, const unsigned int split_num) {
-    std::cout << "Loading feature... " << Vt_nodes.size() << std::endl;
     VertexIdType index = 0;
     VertexIdType sumrow = 0;
     std::vector<unsigned long> shape;
@@ -199,7 +196,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
             }
         }
         sumrow += nrows;
-        std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
+        // std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
     }
     std::cout<<"Feature size: "<<feature_matrix.size()<<' '<<feature_matrix[0].size()<<std::endl;
 }
@@ -241,7 +238,7 @@ calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 
     for(int i = 0; i < V1.size(); i++){
         V1[i] = V1[i] - theta * V2[i] * pace;
     }
-    printf("theta: %.6f, residue: %.6f\n", theta, diff_sum);
+    // printf("theta: %.6f, residue: %.6f\n", theta, diff_sum);
     return theta * pace;
 }
 
@@ -313,7 +310,7 @@ get_base_with_norm(std::vector<std::vector<double >> &seed_matrix, std::vector<s
                 }
             }
         }
-        printf("id: %4d, dis: %.8f, tar: %4d\n", i, L1_dis_min, min_L1_idx);
+        // printf("id: %4d, dis: %.8f, tar: %4d\n", i, L1_dis_min, min_L1_idx);
         if(min_L1_idx < 0 || min_L1_idx > seed_matrix.size()) continue;
         min_L1_counter[min_L1_idx].first = min_L1_idx;
         min_L1_counter[min_L1_idx].second += 1 - L1_dis_min;

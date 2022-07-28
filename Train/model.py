@@ -1,10 +1,10 @@
-import torch.nn as nn
-import torch
 import math
+import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
-class Dense(nn.Module):
 
+class Dense(nn.Module):
     def __init__(self, in_features, out_features, bias='none'):
         super(Dense, self).__init__()
         self.in_features = in_features
@@ -48,7 +48,3 @@ class MLP(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.fcs[-1](x)
         return x
-
-
-if __name__ == '__main__':
-    pass

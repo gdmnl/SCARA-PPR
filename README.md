@@ -3,13 +3,15 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
 
 [GitHub](https://github.com/gdmnl/SCARA-PPR) |
 [Tech Report](https://sites.google.com/view/scara-techreport)
+<!-- TODO: paper & arxiv link -->
 
-**Citation**
+**Citing**
 
 If you find this work useful, please cite our paper:
 ```
 Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
-SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization. PVLDB, 15(11): XXX-XXX, 2022.
+SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.
+PVLDB, 15(11): 3240-3248, 2022.
 ```
 ```
 @article{liao2022scara,
@@ -18,7 +20,7 @@ SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization. PVLDB,
   journal={Proceedings of the VLDB Endowment},
   volume={15},
   number={11},
-  pages={XXX-XXX},
+  pages={3240-3248},
   year={2022},
   publisher={VLDB Endowment}
 }
@@ -39,15 +41,15 @@ SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization. PVLDB,
 * `query.txt`: indices of query nodes
 
 ### Precompute
-1. Requirements: CMake 3.16, C++ 11
+1. Environment: CMake 3.16, C++ 11. Dependencies (already included): [fast_double_parser](https://github.com/lemire/fast_double_parser), [SFMT](https://github.com/MersenneTwister-Lab/SFMT), [libnpy](https://github.com/llohse/libnpy/)
 2. CMake `cmake -B build`, then `make`
-3. Run scripts `./run_reddit.sh`
+3. Run script `./run_reddit.sh`
 
 ### Train and Test
 1. Install dependencies: `conda create --name <envname> --file requirements.txt`
 2. Run python `python run.py`
 
-## Baselines
+## Baseline Models
 * GraphSAINT: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)
 * APPNP: [APPNP](https://github.com/benedekrozemberczki/APPNP)
 * PPRGo: [PPRGo](https://github.com/TUM-DAML/pprgo_pytorch)
@@ -55,7 +57,7 @@ SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization. PVLDB,
 * AGP: [AGP](https://github.com/wanghzccls/AGP-Approximate_Graph_Propagation)
 * GAS: [GAS](https://github.com/rusty1s/pyg_autoscale)
 
-## Data
+## Dataset Link
 * Citeseer & Pubmed: [GBP](https://github.com/chennnM/GBP)
 * PPI: [GraphSAGE](http://snap.stanford.edu/graphsage/)
 * Yelp: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)

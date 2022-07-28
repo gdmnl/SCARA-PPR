@@ -1,16 +1,9 @@
-# -*- coding:utf-8 -*-
-"""
-File: logger.py
-File Created: 2021-02-17
-Author: nyLiao
-"""
 import os
 from abc import ABC
 from datetime import datetime
 import uuid
 import json
 from dotmap import DotMap
-
 import torch
 
 

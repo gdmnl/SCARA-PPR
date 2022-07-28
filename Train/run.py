@@ -2,14 +2,15 @@
 import time
 import random
 import argparse
+import resource
 import numpy as np
+from sklearn.metrics import f1_score
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.utils.data as Data
 
-from utils import get_max_memory_bytes, f1_score
 from logger import Logger, ModelLogger, prepare_opt
 from loader import load_data
 from model import MLP
@@ -18,7 +19,7 @@ from model import MLP
 # Training settings
 parser = argparse.ArgumentParser()
 parser.add_argument('-f', '--seed', type=int, default=0, help='random seed.')
-parser.add_argument('-c', '--config', default='./config/reddit_gbp.json', help='config path.')
+parser.add_argument('-c', '--config', default='./config/reddit.json', help='config path.')
 parser.add_argument('-v', '--dev', type=int, default=-1, help='device id.')
 args = prepare_opt(parser)
 
@@ -114,25 +115,25 @@ def eval(ld, load_best=False):
 
 
 print('-' * 20)
-print('Start training...')
+# print('Start training...')
 train_time = 0
-es_counter = 0
+conv_epoch = 0
 
 for epoch in range(args.epochs):
-    loss_tra, train_ep = train()
+    loss_train, train_ep = train()
     train_time += train_ep
     acc_val = eval(ld=loader_val)
     scheduler.step(acc_val)
-    if (epoch+1) % 1 == 0:
-        res = f"Epoch:{epoch+1:04d} | train loss:{loss_tra:.4f}, val acc:{acc_val:.4f}, cost:{train_time:.4f}"
+    if (epoch+1) % 10 == 0:
+        res = f"Epoch:{epoch:04d} | train loss:{loss_train:.4f}, val acc:{acc_val:.4f}, cost:{train_time:.4f}"
         logger.print(res)
     is_best = model_logger.save_best(acc_val, epoch=epoch)
-    # Early stopping
+    # Early stop if converge
     if is_best:
-        es_counter = 0
+        conv_epoch = 0
     else:
-        es_counter += 1
-    if es_counter == args.patience:
+        conv_epoch += 1
+    if conv_epoch == args.patience:
         break
 
 acc_train = eval(ld=loader_train, load_best=True)
@@ -140,12 +141,12 @@ print(f"Train time cost: {train_time:0.4f}")
 print(f"Train best acc: {acc_train:0.4f}, Val best acc: {model_logger.acc_best:0.4f}")
 
 print('-' * 20)
-print("Start inference...")
+# print("Start inference...")
 start = time.time()
 acc_test = eval(ld=loader_test, load_best=True)
 time_inference = time.time() - start
-memory = get_max_memory_bytes()
-print(f"Test cost: {time_inference:0.4f}s, Memory: {memory / 2**20:.3f}GB")
+memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+print(f"Test time cost: {time_inference:0.4f}, Memory: {memory / 2**20:.3f}GB")
 
 print(f'Best epoch: {model_logger.epoch_best}, Test acc: {acc_test:.4f}')
 print('-' * 20)

@@ -3,10 +3,6 @@
 #ifndef SPEEDPPR_CLEANGRAPH_H
 #define SPEEDPPR_CLEANGRAPH_H
 
-// #ifndef DEEP_CLEAN
-// #define DEEP_CLEAN
-// #endif
-
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -144,19 +140,11 @@ public:
             fromId = std::stoul(line, &end);
             toID = std::stoul(line.substr(end));
             // remove self-loops
-#ifdef DEEP_CLEAN
-            if (fromId != toID) { edges.emplace_back(fromId, toID); }
-#else
             edges.emplace_back(fromId, toID);
-#endif
         }
         // read the edges
         for (VertexIdType fromId, toID; inf >> fromId >> toID;) {
-#ifdef DEEP_CLEAN
-            if (fromId != toID) { edges.emplace_back(fromId, toID); }
-#else
             edges.emplace_back(fromId, toID);
-#endif
             if (++num_lines % 5000000 == 0) { printf("%zu Valid Lines Read.\n", num_lines); }
         }
         ////////////////////////////////////////////////////////////////////////////////
@@ -209,48 +197,8 @@ public:
         printf("The number of Isolated Points: %u\n", num_isolated_points);
         printf("The maximum out degree is: %u\n", max_degree);
 
-        // re-label the vertices.
-#ifdef DEEP_CLEAN
-        std::vector<std::vector<VertexIdType>> out_adj_list(one_plus_id_max, std::vector<VertexIdType>());
-        for (const auto &edge : edges) {
-            out_adj_list[edge.from_id].push_back(edge.to_id);
-        }
-        numOfVertices = 0;
-        std::vector<bool> visited(one_plus_id_max, false);
-        std::vector<VertexIdType> id_map(one_plus_id_max, 0);
-        for (VertexIdType index = 0; index < one_plus_id_max; ++index) {
-            // skip singleton and visited vertices
-            if (!visited[index] && out_degree[index] > 0) {
-                std::vector<VertexIdType> current_level({index});
-                visited[index] = true;
-                std::vector<VertexIdType> next_level;
-                while (!current_level.empty()) {
-                    for (const VertexIdType &current_id : current_level) {
-                        id_map[current_id] = numOfVertices;
-                        ++numOfVertices;
-                        for (const VertexIdType &nid : out_adj_list[current_id]) {
-                            if (!visited[nid]) {
-                                next_level.push_back(nid);
-                                visited[nid] = true;
-                            }
-                        }
-                    }
-                    current_level.swap(next_level);
-                    next_level.clear();
-                }
-            }
-        }
-        printf("Relabeling Finish.\n");
-        printf("The number of valid vertices: %u\n", numOfVertices);
-        // re-write the edges ids
-        for (auto &edge : edges) {
-            edge.from_id = id_map[edge.from_id];
-            edge.to_id = id_map[edge.to_id];
-        }
-#else
         // we assume the vertice ids are in the arrange of 0 ... numOfVertices - 1
         numOfVertices = one_plus_id_max;
-#endif
 
         // sort the edges
         std::sort(edges.begin(), edges.end());
@@ -266,23 +214,6 @@ public:
             printf("%s\n", attribute_file.c_str());
             exit(1);
         }
-
-        // write the graph in txt
-#ifdef DEEP_CLEAN
-        std::string graph_txt_file = _output_folder + '/' + "graph.txt";
-        if (std::FILE *file = std::fopen(graph_txt_file.c_str(), "w")) {
-            fprintf(file, "%u\n", numOfVertices);
-            for (const auto &edge : edges) {
-                fprintf(file, "%u\t%u\n", edge.from_id, edge.to_id);
-            }
-            printf("Writing Txt Finished.\n");
-            std::fclose(file);
-        } else {
-            printf("Graph::clean_graph; File Not Exists.\n");
-            printf("%s\n", graph_txt_file.c_str());
-            exit(1);
-        }
-#endif
 
         // write the graph in binary
         std::string graph_bin_file = _output_folder + '/' + "graph.bin";

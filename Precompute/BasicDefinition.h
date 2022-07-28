@@ -5,10 +5,6 @@
 
 #include <queue>
 
-#ifndef DEBUG_MODE
-#define DEBUG_MODE
-#endif
-
 #ifndef FAST_READ
 #define FAST_READ
 #endif

@@ -84,7 +84,7 @@ public:
     void generate() {
         const VertexIdType num_vertices = graph.getNumOfVertices();
         for (VertexIdType sid = 0, index = 0; sid < num_vertices; ++sid) {
-            if (sid % 500000 == 0) { std::cout << sid << " vertices processed.\n"; }
+            // if (sid % 500000 == 0) { std::cout << sid << " vertices processed.\n"; }
             start_indices[sid] = index;
             for (uint32_t j = 0; j < num_zero_walks; ++j) {
                 VertexIdType current_id = sid;
@@ -169,12 +169,6 @@ public:
     }
 
     inline VertexIdType get_one_hop_start_index(const VertexIdType &_vid) const {
-#ifdef DEBUG_MODE
-//        if (_vid >= graph.getNumOfVertices()) {
-//            printf("Error in " __FILE__ " line %d\n", __LINE__);
-//            exit(1);
-//        }
-#endif
         assert(_vid < graph.getNumOfVertices());
         return start_indices[_vid] + num_zero_walks;
     }

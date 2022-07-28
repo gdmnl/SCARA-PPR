@@ -7,7 +7,7 @@
     "batch": 64,
     "lr": 0.005,
     "weight_decay": 1e-4,
-    "layer": 2,
+    "layer": 4,
     "hidden": 128,
     "dropout": 0.3,
     "bias": "none",

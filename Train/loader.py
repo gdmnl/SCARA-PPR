@@ -1,6 +1,6 @@
 import gc
 import numpy as np
-import scipy.sparse
+# import scipy.sparse as sp
 import sklearn
 import torch
 
@@ -48,7 +48,7 @@ def load_data(algo: str, datastr: str, datapath: str,
               inductive: bool, multil: bool, spt: int,
               alpha: float, eps: float, rrz: float, seed: int=0):
     print('-' * 20)
-    print("Start loading...")
+    # print("Start loading...")
     # Get degree and label
     processor = DataProcess(datastr, path=datapath, rrz=rrz, seed=seed)
     processor.input(['deg', 'labels'])
@@ -78,7 +78,7 @@ def load_data(algo: str, datastr: str, datapath: str,
             feat_file = f'{est_dir}/score_{alpha:g}_{eps:g}.npy'
             features = np.load(feat_file)
         else:
-            # features = scipy.sparse.lil_matrix((200, n), dtype=np.float32)
+            # features = sp.lil_matrix((200, n), dtype=np.float32)
             features = None
             for i in range(spt):
                 feat_file = f'{est_dir}/score_{alpha:g}_{eps:g}_{i}.npy'
@@ -126,11 +126,11 @@ def load_data(algo: str, datastr: str, datapath: str,
         del features
     gc.collect()
 
-    print('train head ', idx['train'][:5])
-    print(features[idx['train'][:5], :])
-    print('test head ', idx['test'][:5])
-    print(features[idx['test'][:5], :])
+    # print('train head ', idx['train'][:5])
+    # print(features[idx['train'][:5], :])
+    # print('test head ', idx['test'][:5])
+    # print(features[idx['test'][:5], :])
+    # print(labels.size(), labels)
     print(f"n={n}, m={m}, F_t={feat['train'].size()}")
-    print(labels.size(), labels)
-    print(idx['train'].size(), idx['val'].size(), idx['test'].size())
+    print(f"n_train={idx['train'].size()}, n_val={idx['val'].size()}, n_test={idx['test'].size()}")
     return feat, labels, idx

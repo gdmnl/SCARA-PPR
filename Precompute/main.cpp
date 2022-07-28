@@ -12,13 +12,12 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-//
     SFMT64::initialize();
     param = parseArgs(argc, argv);
     Graph graph;
     graph.set_alpha(param.alpha);
 
-    if (param.algorithm == "CLEAN_GRAPH") {
+    if (param.algorithm == "clean_graph") {
         CleanGraph cleaner;
         if (param.is_undirected_graph) {
             std::string output_file = param.output_folder + "/" + "edge_duplicated_graph.txt";
@@ -37,24 +36,7 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (param.algorithm == "BUILD_INDEX") {
-        if (!param.index_file.empty()) {
-            graph.set_dummy_neighbor(graph.get_dummy_id());
-            WalkCache walkCache(graph);
-            const double time_start = getCurrentTime();
-            walkCache.generate();
-            const double time_end = getCurrentTime();
-            printf("Time Used %.12f\n", time_end - time_start);
-            walkCache.save(param.index_file);
-            graph.reset_set_dummy_neighbor();
-            return 0;
-        } else {
-            printf("Error in" __FILE__ " LINE %d." "File Not Exists\n", __LINE__);
-            return 0;
-        }
-    }
-
-    if (param.algorithm == "FEATPUSH"){
+    if (param.algorithm == "featpush"){
         std::vector<VertexIdType> Vt_nodes; // list of queried nodes
         std::vector<std::vector<float>> feature_matrix;
         unsigned int node_num = load_query(Vt_nodes, param.query_file);
@@ -65,13 +47,8 @@ int main(int argc, char **argv) {
         double time_end;
         graph.reset_set_dummy_neighbor();
         WalkCache walkCache(graph);
-        if (param.with_idx) {
-            walkCache.load(param.index_file);
-        }
         unsigned long feat_num = feature_matrix[0].size(); // feature size
         unsigned long out_size = feat_num * node_num;
-        MSG(feat_num);
-        MSG(out_size);
         std::vector<float> out_matrix(out_size);
         printf("Result size: %ld \n", out_matrix.size());
 
@@ -101,7 +78,7 @@ int main(int argc, char **argv) {
 
         printf("Mem: %ld\n", get_proc_memory());
         printf("Total Time: %.6f, Average: %.12f\n", total_time, total_time / feat_num);
-    } else if (param.algorithm == "FEATREUSE"){
+    } else if (param.algorithm == "featreuse"){
         std::vector<VertexIdType> Vt_nodes;
         std::vector<std::vector<float>> feature_matrix;
         unsigned int node_num = load_query(Vt_nodes, param.query_file);
@@ -112,16 +89,12 @@ int main(int argc, char **argv) {
         double time_end;
         graph.reset_set_dummy_neighbor();
         WalkCache walkCache(graph);
-        if (param.with_idx) {
-            walkCache.load(param.index_file);
-        }
         unsigned long feat_num = feature_matrix[0].size(); // feature size
         unsigned long out_size = feat_num * node_num;
-        MSG(feat_num);
-        MSG(out_size);
         std::vector<float> out_matrix(out_size);
         printf("Result size: %ld \n", out_matrix.size());
 
+        // Select base
         std::vector<std::vector<double>> seed_matrix;
         for (int i = 0; i < feature_matrix[0].size(); i++) {
             std::vector<double> seed;
@@ -140,8 +113,9 @@ int main(int argc, char **argv) {
         graph.fill_dead_end_neighbor_with_id();
         double avg_tht = 0; // base theta
         double avg_res = 0; // reuse residue
-        int valid_feat_num = 0;
+        int re_feat_num = 0;
 
+        // Calculate base PPR
         for(int i = 0; i < base_matrix.size(); i++){
             std::vector<double> seed(graph.getNumOfVertices(), 0.0);
             for(int j = 0; j < feature_matrix.size(); j++){
@@ -156,6 +130,7 @@ int main(int argc, char **argv) {
         }
         printf("Time Used on Base %.12f\n", total_time);
 
+        // Calculate residue PPR
         for (int i = 0; i < seed_matrix.size(); i++) {
             // printf("Query ID: %d\n", i);
             bool is_base = false;
@@ -163,7 +138,7 @@ int main(int argc, char **argv) {
             for (base_idx = 0; base_idx < base_vex.size(); base_idx++){
                 if (base_vex[base_idx] == i){
                     is_base = true;
-                    printf("ID: %4d  is base\n", i);
+                    // printf("ID: %4d  is base\n", i);
                     break;
                 }
             }
@@ -177,10 +152,10 @@ int main(int argc, char **argv) {
                 double rsum = 0;
                 for(double t : raw_seed)   rsum+=abs(t);
                 avg_res += rsum;
-                printf("ID: %4d, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, rsum);
+                // printf("ID: %4d, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, rsum);
                 // Ignore less relevant features
                 // if (theta_sum < 1.6) continue;
-                valid_feat_num++;
+                re_feat_num++;
 
                 std::vector<double> seed(graph.getNumOfVertices(), 0.0);
                 for (int j = 0; j < feature_matrix.size(); j++){
@@ -210,11 +185,11 @@ int main(int argc, char **argv) {
             }
         }
 
-        avg_tht /= valid_feat_num;
-        avg_res /= valid_feat_num;
+        avg_tht /= re_feat_num;
+        avg_res /= re_feat_num;
         MSG(avg_tht);
         MSG(avg_res);
-        MSG(valid_feat_num);
+        MSG(re_feat_num);
         printf("Mem: %ld\n", get_proc_memory());
         printf("Total Time: %.6f, Average: %.12f\n", total_time, total_time / feat_num);
     }
