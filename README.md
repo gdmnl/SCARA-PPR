@@ -5,32 +5,11 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
 [Tech Report](https://sites.google.com/view/scara-techreport)
 <!-- TODO: paper & arxiv link -->
 
-**Citing**
-
-If you find this work useful, please cite our paper:
-```
-Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
-SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.
-PVLDB, 15(11): 3240-3248, 2022.
-```
-```
-@article{liao2022scara,
-  title={SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization},
-  author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
-  journal={Proceedings of the VLDB Endowment},
-  volume={15},
-  number={11},
-  pages={3240-3248},
-  year={2022},
-  publisher={VLDB Endowment}
-}
-```
-
 ## Usage
-We provide a complete example and its log in the [demo notebook](Train/demo.ipynb).
+**We provide a complete example and its log in the [demo notebook](demo.ipynb). The sample PubMed dataset is available in the [data folder](data/pubmed/).**
 
 ### Data Preparation
-1. Download data (links [below](#dataset-link)) in GBP format to path `data/[dataset_name]`. As shown in the PubMed dataset example, there are three files:
+1. Download data (links [below](#dataset-link)) in GBP format to path `data/[dataset_name]`. Similar to the PubMed dataset example, there are three files:
   * `adj.txt`: adjacency table
     * First line: "`# [number of nodes]`"
   * `feats.npy`: features in .npy array
@@ -68,3 +47,24 @@ We provide a complete example and its log in the [demo notebook](Train/demo.ipyn
 * Products & Papers100M: [OGB](https://github.com/snap-stanford/ogb)
 * Amazon: [Cluster-GCN](http://manikvarma.org/downloads/XC/XMLRepository.html)
 * MAG: [PANE](https://renchi.ac.cn/datasets/)
+
+## Citing
+
+If you find this work useful, please cite our paper:
+```
+Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
+SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.
+PVLDB, 15(11): 3240-3248, 2022.
+```
+```
+@article{liao2022scara,
+  title={SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization},
+  author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
+  journal={Proceedings of the VLDB Endowment},
+  volume={15},
+  number={11},
+  pages={3240-3248},
+  year={2022},
+  publisher={VLDB Endowment}
+}
+```
