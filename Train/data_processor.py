@@ -205,10 +205,9 @@ class DataProcess(object):
                     self.idx_train = np.sort(rnd[:n_train])
                     self.idx_val = np.sort(rnd[n_train:n_train + n_val])
                     self.idx_test = np.sort(rnd[n_train + n_val:])
-                elif 'mag' in self.name:
-                    self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)
                 else:
-                    self.idx_train, self.idx_val, self.idx_test = split_random(self.seed, self.n, n_train, n_val)
+                    self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)
+                    # self.idx_train, self.idx_val, self.idx_test = split_random(self.seed, self.n, n_train, n_val)
             elif key == 'labels_oh':
                 if self.labels.ndim == 2:
                     self.labels_oh = self.labels
@@ -302,21 +301,19 @@ class DataProcess(object):
                 print("Key not exist: {}".format(key))
 
     def output_split(self, attr_matrix, spt=10, name='feats'):
+        """Split large matrix by feature dimension."""
         from tqdm import trange
         n = attr_matrix.shape[0]
         nd = n // spt
-        ttl = 0
         for i in trange(spt):
             if i < spt - 1:
                 idxl, idxr = i * nd, (i+1) * nd
             else:
                 idxl, idxr = i * nd, n
             prt = attr_matrix[idxl:idxr, :]
-            ttl += prt.shape[0]
 
             prt_path = self._get_path('{}{}.npz'.format(name, i))
             np.savez(prt_path, prt)
-        print(n, ttl)
 
 
 if __name__ == '__main__':

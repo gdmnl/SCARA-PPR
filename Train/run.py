@@ -30,7 +30,7 @@ if args.dev >= 0:
     torch.cuda.manual_seed(args.seed)
 
 print('-' * 20)
-flag_run = "L{}_e{}_{}".format(args.layer, args.eps, args.seed)
+flag_run = str(args.seed)
 logger = Logger(args.data, args.algo, flag_run=flag_run)
 logger.save_opt(args)
 model_logger = ModelLogger(logger, state_only=True)
@@ -125,7 +125,7 @@ for epoch in range(args.epochs):
     if (epoch+1) % 10 == 0:
         res = f"Epoch:{epoch:04d} | train loss:{loss_train:.4f}, val acc:{acc_val:.4f}, cost:{train_time:.4f}"
         logger.print(res)
-    is_best = model_logger.save_best(acc_val, epoch=epoch)
+    is_best = model_logger.save_best(acc_val, epoch=epoch, print_log=False)
     # Early stop if converge
     if is_best:
         conv_epoch = 0

@@ -1,7 +1,7 @@
 {
     "data": "pubmed",
     "path": "../data/",
-    "algo": "featpush",
+    "algo": "featreuse",
     "epochs": 1000,
     "patience": 100,
     "batch": 64,
@@ -12,7 +12,7 @@
     "dropout": 0.5,
     "bias": "none",
     "alpha": 0.1,
-    "eps": 8,
+    "eps": 2,
     "rrz": 0.5,
     "spt": 1
 }

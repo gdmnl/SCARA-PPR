@@ -12,8 +12,8 @@
 #include <unistd.h>
 
 int main(int argc, char **argv) {
-    SFMT64::initialize();
     param = parseArgs(argc, argv);
+    SFMT64::initialize(param.seed);
     Graph graph;
     graph.set_alpha(param.alpha);
 

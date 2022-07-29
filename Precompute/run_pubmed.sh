@@ -9,5 +9,5 @@ mkdir -p ${SAVEDIR}
 ../Precompute/build/featpush -algo ${ALGOSTR} \
         -meta ${DATADIR}/attribute.txt -graph_binary ${DATADIR}/graph.bin \
         -query ${DATADIR}/query.txt -feature_file ${DATADIR}/feats_norm.npy \
-        -estimation_folder ${SAVEDIR} -split_num 1 \
-        -alpha 0.1 -epsilon 8 > ${SAVEDIR}/out_${SEED}.txt
+        -estimation_folder ${SAVEDIR} -split_num 1 -seed ${SEED} \
+        -alpha 0.1 -epsilon 2 > ${SAVEDIR}/out_${SEED}.txt

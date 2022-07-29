@@ -113,6 +113,9 @@ Param parseArgs(int nargs, char **args) {
         } else if (para == "feature_file") {
             rtn.feature_file = getNextWord(arg);
             printf("Feature File: %s\n", rtn.feature_file.c_str());
+        } else if (para == "seed") {
+            rtn.seed = std::stoi(getNextWord(arg));
+            printf("Random Seed: %d\n", rtn.seed);
         } else if (para == "split_num") {
             rtn.split_num = std::stoi(getNextWord(arg));
             printf("Number of Split: %d\n", rtn.split_num);

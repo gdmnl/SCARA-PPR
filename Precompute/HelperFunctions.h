@@ -76,6 +76,7 @@ struct Param {
     std::string output_folder;
     std::string estimation_folder;
     unsigned int split_num = 1;
+    unsigned int seed = 0;
     double epsilon = 0.5;
     double alpha = 0.2;
     double gamma = 0.2;
@@ -205,7 +206,6 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
 inline double
 calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 1.0){
     int index;
-    // std::vector<int> used_index;
     double used_sum = 0;
     double theta;
     std::vector<std::pair<double, int>> ratio_and_index;
@@ -303,7 +303,7 @@ get_base_with_norm(std::vector<std::vector<double >> &seed_matrix, std::vector<s
         int min_L1_idx = -1;
         for (int j = 0; j < seed_matrix.size(); j++) {
             if(i!=j){
-                double L1_dis = calc_L2_distance(seed_matrix[i], seed_matrix[j]);
+                double L1_dis = calc_L1_distance(seed_matrix[i], seed_matrix[j]);
                 if (L1_dis_min > L1_dis){
                     L1_dis_min = L1_dis;
                     min_L1_idx = j;
@@ -337,14 +337,14 @@ feature_reuse(std::vector<double> &raw_seed, std::vector<std::vector<double >> &
         double L1_dis_min = base_matrix.size();
         int min_L1_idx = 0;
         for(int j = 0; j < base_matrix.size(); j++){
-            double L1_dis = calc_L2_distance(raw_seed, base_matrix[j]);
+            double L1_dis = calc_L1_distance(raw_seed, base_matrix[j]);
             if(L1_dis_min > L1_dis){
                 L1_dis_min = L1_dis;
                 min_L1_idx = j;
             }
         }
-        double theta = calc_L2_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
-        if (abs(theta) / delta < 1 / 128) break;
+        double theta = calc_L1_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
+        if (abs(theta) / delta < 1 / 16) break;
         base_weight[min_L1_idx] += theta;
     }
     return base_weight;

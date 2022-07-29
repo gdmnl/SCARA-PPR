@@ -20,16 +20,14 @@ public:
 
     void duplicate_edges(const std::string &_input_file,
                          const std::string &_output_file) {
-        ////////////////////////////////////////////////////////////
         std::ifstream inf(_input_file.c_str());
         if (!inf.is_open()) {
             printf("CleanGraph::duplicate_edges; File not exists.\n");
             printf("%s\n", _input_file.c_str());
             exit(1);
         }
-        ////////////////////////////////////////////////////////////
         // status indicator
-        printf("\nReading Input Graph\n");
+        // printf("\nReading Input Graph\n");
 
         std::string line;
         /**
@@ -42,7 +40,6 @@ public:
             printf("%s\n", line.c_str());
             exit(1);
         }
-        ////////////////////////////////////////////////////////////////////////////////
         // create temporary graph
         std::vector<Edge> edges;
         numOfEdges = 0;
@@ -102,16 +99,14 @@ public:
      */
     void clean_graph(const std::string &_input_file,
                      const std::string &_output_folder) {
-        ////////////////////////////////////////////////////////////
         std::ifstream inf(_input_file.c_str());
         if (!inf.is_open()) {
             printf("CleanGraph::clean_graph; File not exists.\n");
             printf("%s\n", _input_file.c_str());
             exit(1);
         }
-        ////////////////////////////////////////////////////////////
         // status indicator
-        printf("\nReading Input Graph\n");
+        // printf("\nReading Input Graph\n");
 
         std::string line;
         /**
@@ -124,7 +119,6 @@ public:
             printf("%s\n", line.c_str());
             exit(1);
         }
-        ////////////////////////////////////////////////////////////////////////////////
         // create temporary graph
         std::vector<Edge> edges;
         numOfEdges = 0;
@@ -156,7 +150,7 @@ public:
         numOfEdges = edges.size();
         printf("%d-th Non-Self Loop Edges.\n", numOfEdges);
         printf("Finish Reading.\n");
-        printf("\n%s\n", std::string(30, '-').c_str());
+        printf("%s\n", std::string(80, '-').c_str());
 
         // find the maximum id
         size_t id_max = 0;

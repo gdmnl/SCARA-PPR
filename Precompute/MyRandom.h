@@ -22,9 +22,9 @@ public:
     * The function gen_rand64 should not be called after gen_rand32,
     * unless an initialization is again executed.
     */
-    static void initialize() {
+    static void initialize(uint32_t seed) {
 //        sfmt_init_gen_rand(&sfmt, clock());
-        sfmt_init_gen_rand(&sfmt, 1234);
+        sfmt_init_gen_rand(&sfmt, seed);
     }
 
 

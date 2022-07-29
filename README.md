@@ -27,17 +27,17 @@ PVLDB, 15(11): 3240-3248, 2022.
 ```
 
 ## Usage
-See [demo notebook](demo.ipynb) for a full example.
+We provide a complete example and its log in the [demo notebook](Train/demo.ipynb).
 
 ### Data Preparation
-1. Download data (links [below](https://github.com/gdmnl/SCARA-PPR#dataset-link)) in GBP format to path `data/[dataset_name]`. There are three files:
+1. Download data (links [below](#dataset-link)) in GBP format to path `data/[dataset_name]`. As shown in the PubMed dataset example, there are three files:
   * `adj.txt`: adjacency table
     * First line: "`# [number of nodes]`"
   * `feats.npy`: features in .npy array
   * `labels.npz`: node label information
     * 'label': labels (number or one-hot)
     * 'idx_train/idx_val/idx_test': indices of training/validation/test nodes (inductive task)
-2. Run python `python data_processor.py` to generate additional processed files:
+2. Run command `python data_processor.py` to generate additional processed files:
   * `degrees.npz`: node degrees in .npz 'arr_0'
   * `feats_norm.npy`: normalized features in .npy array
     * Large matrix can be split
@@ -46,11 +46,11 @@ See [demo notebook](demo.ipynb) for a full example.
 ### Precompute
 1. Environment: CMake 3.16, C++ 11. Dependencies (already included): [fast_double_parser](https://github.com/lemire/fast_double_parser), [SFMT](https://github.com/MersenneTwister-Lab/SFMT), [libnpy](https://github.com/llohse/libnpy/)
 2. CMake `cmake -B build`, then `make`
-3. Run script `./run_pubmed.sh`
+3. Run script: `./run_pubmed.sh`
 
 ### Train and Test
 1. Install dependencies: `conda create --name [envname] --file requirements.txt`
-2. Run python `python -u run.py -f [seed] -c [config_file] -v [device]`
+2. Run experiment: `python run.py -f [seed] -c [config_file] -v [device]`
 
 ## Baseline Models
 * GraphSAINT: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)
