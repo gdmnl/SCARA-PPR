@@ -60,7 +60,7 @@ We provide a complete example and its log in the [demo notebook](Train/demo.ipyn
 * AGP: [AGP](https://github.com/wanghzccls/AGP-Approximate_Graph_Propagation)
 * GAS: [GAS](https://github.com/rusty1s/pyg_autoscale)
 
-## Dataset Link
+## Dataset Links
 * Citeseer & Pubmed: [GBP](https://github.com/chennnM/GBP)
 * PPI: [GraphSAGE](http://snap.stanford.edu/graphsage/)
 * Yelp: [GraphSAINT](https://github.com/GraphSAINT/GraphSAINT)
