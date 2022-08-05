@@ -119,32 +119,13 @@ inline void output_vector(std::vector<T> Vec, std::string filename){
     file.close();
 }
 
-template<class FLOAT_TYPE>
 inline void
-output_feature(const std::vector<FLOAT_TYPE> &_value_vec, std::vector<float> &out_matrix,
-    const std::string &_out_path, const unsigned int split_num,
-    const unsigned long idx_feat, const unsigned long feat_num, const VertexIdType &_node_num) {
-    // Decide split
-    unsigned long spt_size = feat_num / split_num;  // size per split
-    unsigned long spt = idx_feat / spt_size;    // index of split
-    unsigned long idxf = idx_feat % spt_size;   // index of feature in split
-    // Save [F/split_num, n] array of all nodes to out_matrix
-    for (VertexIdType id = 0; id < _node_num; ++id) {
-        out_matrix[idxf*_node_num+id] = _value_vec[id];
-    }
-
+output_feature(std::vector<float> &out_matrix, const std::string &_out_path,
+               const unsigned long spt_size, const VertexIdType &_node_num) {
     // Save to .npy file
-    if ((idxf + 1) % spt_size == 0 || idx_feat + 1 == feat_num) {
-        std::string spt_path;
-        if (split_num == 1) {
-            spt_path = _out_path + ".npy";
-        } else {
-            spt_path = _out_path + "_" + std::to_string(spt) + ".npy";
-        }
-        std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};
-        npy::SaveArrayAsNumpy(spt_path, false, res_shape.size(), res_shape.data(), out_matrix);
-        printf("Feature saved: %s\n", spt_path.c_str());
-    }
+    std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};
+    npy::SaveArrayAsNumpy(_out_path, false, res_shape.size(), res_shape.data(), out_matrix);
+    printf("Feature saved: %s\n", _out_path.c_str());
 }
 
 

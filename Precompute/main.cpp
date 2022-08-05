@@ -3,13 +3,18 @@
 //     title={Unifying the Global and Local Approaches: An Efficient Power Iteration with Forward Push},
 //     author={Wu, Hao and Gan, Junhao and Wei, Zhewei and Zhang, Rui},
 //     journal={arXiv preprint arXiv:2101.03652}}
-#include <random>
 #include "HelperFunctions.h"
 #include "Graph.h"
 #include "BatchRandomWalk.h"
 #include "SpeedPPR.h"
 #include "CleanGraph.h"
 #include <unistd.h>
+#include <thread>
+
+// void featpush(
+//     unsigned long feat_left, unsigned long feat_right,
+//     const VertexIdType NumOfVertices) {
+// }
 
 int main(int argc, char **argv) {
     param = parseArgs(argc, argv);
@@ -43,36 +48,48 @@ int main(int argc, char **argv) {
         load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
         class SpeedPPR speedPPR(graph);
         double total_time = 0;
-        double time_start;
-        double time_end;
         graph.reset_set_dummy_neighbor();
+        graph.fill_dead_end_neighbor_with_id();
         WalkCache walkCache(graph);
-        unsigned long feat_num = feature_matrix[0].size(); // feature size
-        unsigned long out_size = feat_num * node_num;
+        unsigned long feat_num = feature_matrix[0].size();  // feature size
+        unsigned long spt_size = (feat_num + param.split_num - 1) / param.split_num;    // size per split (ceiling)
+        unsigned long out_size = spt_size * node_num;       // length of output matrix
         std::vector<float> out_matrix(out_size);
         printf("Result size: %ld \n", out_matrix.size());
 
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<double> whole_graph_structure(graph.getNumOfVertices());
         for (int i = 0; i < feat_num; i++) {
             // printf("Query ID: %d ... \n", i);
+            SpeedPPR::WHOLE_GRAPH_STRUCTURE<double> whole_graph_structure(graph.getNumOfVertices());
             std::vector<double> seed(graph.getNumOfVertices(), 0.0);
             for(int j = 0; j < Vt_nodes.size(); j++){
                 seed[Vt_nodes[j]] = feature_matrix[j][i];
             }
 
-            graph.fill_dead_end_neighbor_with_id();
-            time_start = getCurrentTime();
+            double time_start = getCurrentTime();
             speedPPR.compute_approximate_page_rank_3(whole_graph_structure, seed, param.epsilon, param.alpha,
                                                      1.0 / graph.getNumOfVertices(), walkCache);
-            time_end = getCurrentTime();
+            double time_end = getCurrentTime();
             total_time += time_end - time_start;
 
             if (param.output_estimations) {
-                std::stringstream res_file;
-                res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon;
-                output_feature(whole_graph_structure.means, out_matrix,
-                               res_file.str(), param.split_num,
-                               i, feat_num, node_num);
+                // Decide split
+                unsigned long spt = i / spt_size;    // index of split
+                unsigned long idxf = i % spt_size;   // index of feature in split
+                // Save [F/split_num, n] array of all nodes to out_matrix
+                for (VertexIdType id = 0; id < node_num; ++id) {
+                    out_matrix[idxf*node_num+id] = whole_graph_structure.means[id];
+                }
+
+                if (idxf+1 == spt_size || i+1 == feat_num) {
+                    std::stringstream res_file;
+                    if (param.split_num == 1) {
+                        res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
+                    } else {
+                        res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
+                    }
+                    output_feature(out_matrix, res_file.str(),
+                                   idxf+1, node_num);
+                }
             }
         }
 
@@ -89,8 +106,9 @@ int main(int argc, char **argv) {
         double time_end;
         graph.reset_set_dummy_neighbor();
         WalkCache walkCache(graph);
-        unsigned long feat_num = feature_matrix[0].size(); // feature size
-        unsigned long out_size = feat_num * node_num;
+        unsigned long feat_num = feature_matrix[0].size();  // feature size
+        unsigned long spt_size = (feat_num + param.split_num - 1) / param.split_num;    // size per split (ceiling)
+        unsigned long out_size = spt_size * node_num;       // length of output matrix
         std::vector<float> out_matrix(out_size);
         printf("Result size: %ld \n", out_matrix.size());
 
@@ -176,12 +194,26 @@ int main(int argc, char **argv) {
                     }
                 }
             }
+
             if (param.output_estimations) {
-                std::stringstream res_file;
-                res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon;
-                output_feature(whole_graph_structure.means, out_matrix,
-                               res_file.str(), param.split_num,
-                               i, feat_num, node_num);
+                // Decide split
+                unsigned long spt = i / spt_size;    // index of split
+                unsigned long idxf = i % spt_size;   // index of feature in split
+                // Save [F/split_num, n] array of all nodes to out_matrix
+                for (VertexIdType id = 0; id < node_num; ++id) {
+                    out_matrix[idxf*node_num+id] = whole_graph_structure.means[id];
+                }
+
+                if (idxf+1 == spt_size || i+1 == feat_num) {
+                    std::stringstream res_file;
+                    if (param.split_num == 1) {
+                        res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
+                    } else {
+                        res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
+                    }
+                    output_feature(out_matrix, res_file.str(),
+                                   idxf+1, node_num);
+                }
             }
         }
 
