@@ -312,8 +312,8 @@ class DataProcess(object):
                 idxl, idxr = i * nd, n
             prt = attr_matrix[idxl:idxr, :]
 
-            prt_path = self._get_path('{}{}.npz'.format(name, i))
-            np.savez(prt_path, prt)
+            prt_path = self._get_path('{}_{}.npy'.format(name, i))
+            np.save(prt_path, prt)
 
 
 if __name__ == '__main__':

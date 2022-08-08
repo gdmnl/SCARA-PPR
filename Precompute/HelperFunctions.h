@@ -91,6 +91,14 @@ extern Param parseArgs(int nargs, char **args);
 
 // ==================== IO
 template<class T>
+inline double vector_L1(std::vector<T> Vec){
+    double sum = 0;
+    for(auto a : Vec)
+        sum += abs(a);
+    return sum;
+}
+
+template<class T>
 inline void show_vector(const std::string &_header, const std::vector<T> &_vec) {
     if (_vec.empty()) {
         std::cout << "Empty Vector." << std::endl;
@@ -129,7 +137,7 @@ output_feature(std::vector<float> &out_matrix, const std::string &_out_path,
 }
 
 
-inline unsigned int
+inline size_t
 load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
     std::ifstream query_file(query_path);
     if (query_file.good() == false) {
@@ -147,7 +155,7 @@ load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
     return Vt_nodes.size();
 }
 
-inline void
+inline size_t
 load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>> &feature_matrix,
     std::string feature_path, const unsigned int split_num) {
     VertexIdType index = 0;
@@ -160,7 +168,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
     for (int spt = 0; spt < split_num; spt ++) {
         std::string spt_path = feature_path;
         if (split_num > 1) {
-            spt_path = spt_path.insert(feature_path.length() - 4, std::to_string(spt));
+            spt_path = spt_path.insert(feature_path.length() - 4, '_' + std::to_string(spt));
         }
         shape.clear();
         arr_np.clear();
@@ -181,6 +189,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
         // std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
     }
     std::cout<<"Feature size: "<<feature_matrix.size()<<" "<<feature_matrix[0].size()<<std::endl;
+    return feature_matrix[0].size();
 }
 
 // ==================== Reuse
@@ -274,69 +283,62 @@ calc_L2_distance(std::vector<double> &V1, std::vector<double> &V2){
     return distance;
 }
 
-inline void
-get_base_with_norm(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vector<double>> &base_matrix,
-                   std::vector<int> &base_vex, double base_ratio)
-{
-    std::vector<std::pair<int, double>> min_L1_counter(seed_matrix.size(), std::make_pair(0, 0));
+inline size_t
+select_base(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vector<double>> &base_matrix,
+                   std::vector<int> &base_nodes, double base_ratio) {
+    // (min norm base, min norm) for each feature
+    std::vector<std::pair<int, double>> min_counter(seed_matrix.size(), std::make_pair(0, 0));
     for (int i = 0; i < seed_matrix.size(); i++) {
-        double L1_dis_min = seed_matrix.size();
-        int min_L1_idx = -1;
+        double dis_min = seed_matrix.size();
+        int idx_min = -1;
         for (int j = 0; j < seed_matrix.size(); j++) {
             if(i!=j){
-                double L1_dis = calc_L1_distance(seed_matrix[i], seed_matrix[j]);
-                if (L1_dis_min > L1_dis){
-                    L1_dis_min = L1_dis;
-                    min_L1_idx = j;
+                double dis = calc_L1_distance(seed_matrix[i], seed_matrix[j]);
+                if (dis_min > dis){
+                    dis_min = dis;
+                    idx_min = j;
                 }
             }
         }
-        // printf("id: %4d, dis: %.8f, tar: %4d\n", i, L1_dis_min, min_L1_idx);
-        if(min_L1_idx < 0 || min_L1_idx > seed_matrix.size()) continue;
-        min_L1_counter[min_L1_idx].first = min_L1_idx;
-        min_L1_counter[min_L1_idx].second += 1 - L1_dis_min;
+        // printf("id: %4d, dis: %.8f, tar: %4d\n", i, dis_min, idx_min);
+        if (idx_min < 0 || idx_min > seed_matrix.size()) continue;
+        min_counter[idx_min].first = idx_min;
+        min_counter[idx_min].second += 1 - dis_min;
     }
 
-    std::sort(min_L1_counter.begin(), min_L1_counter.end(), [](std::pair<int, double> a1, std::pair<int, double>a2){
-        return a1.second > a2.second;
+    std::sort(min_counter.begin(), min_counter.end(),
+        [](std::pair<int, double> a1, std::pair<int, double>a2){
+            return a1.second > a2.second;
     });
-    int base_size = seed_matrix.size() * base_ratio;
+    unsigned int base_size = seed_matrix.size() * base_ratio;
     if (base_size < 3) {
         base_size = 3;
     }
-    MSG(base_size);
-    for(int i = 0; i < base_size; i++){
-        base_matrix.push_back(seed_matrix[min_L1_counter[i].first]);
-        base_vex.push_back(min_L1_counter[i].first);
+    for (int i = 0; i < base_size; i++) {
+        base_matrix.push_back(seed_matrix[min_counter[i].first]);
+        base_nodes.push_back(min_counter[i].first);
     }
+    return base_size;
 }
 
 inline std::vector<double>
-feature_reuse(std::vector<double> &raw_seed, std::vector<std::vector<double >> &base_matrix){
+reuse_weight(std::vector<double> &raw_seed, std::vector<std::vector<double >> &base_matrix){
     std::vector<double> base_weight(base_matrix.size(), 0.0);
     for(double delta = 1; delta <= 16; delta *= 2){
-        double L1_dis_min = base_matrix.size();
-        int min_L1_idx = 0;
+        double dis_min = base_matrix.size();
+        int idx_min = 0;
         for(int j = 0; j < base_matrix.size(); j++){
-            double L1_dis = calc_L1_distance(raw_seed, base_matrix[j]);
-            if(L1_dis_min > L1_dis){
-                L1_dis_min = L1_dis;
-                min_L1_idx = j;
+            double dis = calc_L1_distance(raw_seed, base_matrix[j]);
+            if(dis_min > dis){
+                dis_min = dis;
+                idx_min = j;
             }
         }
-        double theta = calc_L1_residue(raw_seed, base_matrix[min_L1_idx], 1.0);
+        double theta = calc_L1_residue(raw_seed, base_matrix[idx_min], 1.0);
         if (abs(theta) / delta < 1 / 16) break;
-        base_weight[min_L1_idx] += theta;
+        base_weight[idx_min] += theta;
     }
     return base_weight;
-}
-
-template<class T>
-inline double add_up_vector(std::vector<T> Vec){
-    double sum = 0;
-    for(auto a : Vec)
-        sum += a;
-    return sum;
 }
 
 inline long get_proc_memory(){
