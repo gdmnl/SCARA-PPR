@@ -9,8 +9,6 @@ set(CMAKE_CXX_FLAGS "-march=native -msse2 -msse -DHAVE_SSE2 -ffast-math -mfpmath
 
 set(SFMT_INCLUDE_DIR "SFMT/")
 INCLUDE_DIRECTORIES(${SFMT_INCLUDE_DIR})
-set(FAST_DOUBLE_PARSER_INCLUDE_DIR "fast_double_parser/include")
-INCLUDE_DIRECTORIES(${FAST_DOUBLE_PARSER_INCLUDE_DIR})
 
 add_executable(featpush main.cpp
     Graph.h BasicDefinition.h CleanGraph.h

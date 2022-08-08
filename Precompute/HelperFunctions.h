@@ -133,7 +133,7 @@ output_feature(std::vector<float> &out_matrix, const std::string &_out_path,
     // Save to .npy file
     std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};
     npy::SaveArrayAsNumpy(_out_path, false, res_shape.size(), res_shape.data(), out_matrix);
-    printf("Feature saved: %s\n", _out_path.c_str());
+    std::cout<<"Saved "<<_out_path<<": "<<spt_size<<" "<<_node_num<<std::endl;
 }
 
 
@@ -165,7 +165,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
     std::vector<float> arr_np;
     // feature_matrix = std::vector<std::vector<float>>(500,std::vector<float>(Vt_nodes.size()));
 
-    for (int spt = 0; spt < split_num; spt ++) {
+    for (int spt = 0; spt < split_num; spt++) {
         std::string spt_path = feature_path;
         if (split_num > 1) {
             spt_path = spt_path.insert(feature_path.length() - 4, '_' + std::to_string(spt));
@@ -176,7 +176,7 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
         auto feature_data = arr_np.data();
         int nrows = shape[0];   // node num
         int ncols = shape[1];   // feature num
-        std::cout<<"Input shape: "<<nrows<<" "<<ncols<<std::endl;
+        std::cout<<"Input "<<spt_path<<": "<<nrows<<" "<<ncols<<std::endl;
 
         for (int row = 0; row <nrows; row ++) {
             if (sumrow + row == Vt_nodes[index]) {
@@ -193,12 +193,13 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, std::vector<std::vector<float>
 }
 
 // ==================== Reuse
-inline double
-calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 1.0){
+template<class FLOAT_TYPE>
+inline FLOAT_TYPE
+calc_L1_residue(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2, double pace = 1.0){
     int index;
-    double used_sum = 0;
-    double theta;
-    std::vector<std::pair<double, int>> ratio_and_index;
+    FLOAT_TYPE used_sum = 0;
+    FLOAT_TYPE theta;
+    std::vector<std::pair<FLOAT_TYPE, int>> ratio_and_index;
     for(int i = 0; i < V1.size(); i++){
         if(V2[i]!=0) {
             theta =  V1[i] / V2[i];
@@ -206,7 +207,7 @@ calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 
         }
     }
     std::sort ( ratio_and_index.begin(), ratio_and_index.end(),
-                [](std::pair<double, int> a, std::pair<double, int> b) {
+                [](std::pair<FLOAT_TYPE, int> a, std::pair<FLOAT_TYPE, int> b) {
                     return abs(a.first) < abs(b.first); });
     for(int i = 0; i < ratio_and_index.size(); i+=1){
         theta = ratio_and_index[i].first;
@@ -216,8 +217,8 @@ calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 
             break;
     }
 
-    double orig_sum = 0;
-    double diff_sum = 0;
+    FLOAT_TYPE orig_sum = 0;
+    FLOAT_TYPE diff_sum = 0;
     for(int i = 0; i < V1.size(); i++){
         orig_sum += abs(V1[i]);
         diff_sum += abs(V1[i] - theta * V2[i] * pace);
@@ -232,18 +233,19 @@ calc_L1_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 
     return theta * pace;
 }
 
-inline double
-calc_L2_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 1.0){
-    double prd = 0;
-    double sum2 = 0;
+template<class FLOAT_TYPE>
+inline FLOAT_TYPE
+calc_L2_residue(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2, double pace = 1.0){
+    FLOAT_TYPE prd = 0;
+    FLOAT_TYPE sum2 = 0;
     for (int i = 0; i < V1.size(); i++){
         prd += V1[i] * V2[i];
         sum2 += V2[i] * V2[i];
     }
-    double theta = prd / sum2;
+    FLOAT_TYPE theta = prd / sum2;
 
-    double orig_sum = 0;
-    double diff_sum = 0;
+    FLOAT_TYPE orig_sum = 0;
+    FLOAT_TYPE diff_sum = 0;
     for(int i = 0; i < V1.size(); i++){
         orig_sum += abs(V1[i]);
         diff_sum += abs(V1[i] - theta * V2[i] * pace);
@@ -258,21 +260,23 @@ calc_L2_residue(std::vector<double> &V1, std::vector<double> &V2, double pace = 
     return theta * pace;
 }
 
-inline double
-calc_L1_distance(std::vector<double> &V1, std::vector<double> &V2){
-    double distance = 0;
+template<class FLOAT_TYPE>
+inline FLOAT_TYPE
+calc_L1_distance(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2){
+    FLOAT_TYPE distance = 0;
     for (int i = 0; i < V1.size(); i++){
         distance += abs(V1[i] - V2[i]);
     }
     return distance;
 }
 
-inline double
-calc_L2_distance(std::vector<double> &V1, std::vector<double> &V2){
-    double distance = 0;
-    double prd = 0;
-    double sum1 = 0;
-    double sum2 = 0;
+template<class FLOAT_TYPE>
+inline FLOAT_TYPE
+calc_L2_distance(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2){
+    FLOAT_TYPE distance = 0;
+    FLOAT_TYPE prd = 0;
+    FLOAT_TYPE sum1 = 0;
+    FLOAT_TYPE sum2 = 0;
     for (int i = 0; i < V1.size(); i++){
         prd += V1[i] * V2[i];
         sum1 += V1[i] * V1[i];
@@ -283,17 +287,18 @@ calc_L2_distance(std::vector<double> &V1, std::vector<double> &V2){
     return distance;
 }
 
+template<class FLOAT_TYPE>
 inline size_t
-select_base(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vector<double>> &base_matrix,
+select_base(std::vector<std::vector<FLOAT_TYPE >> &seed_matrix, std::vector<std::vector<FLOAT_TYPE>> &base_matrix,
                    std::vector<int> &base_nodes, double base_ratio) {
     // (min norm base, min norm) for each feature
-    std::vector<std::pair<int, double>> min_counter(seed_matrix.size(), std::make_pair(0, 0));
+    std::vector<std::pair<int, FLOAT_TYPE>> min_counter(seed_matrix.size(), std::make_pair(0, 0));
     for (int i = 0; i < seed_matrix.size(); i++) {
-        double dis_min = seed_matrix.size();
+        FLOAT_TYPE dis_min = seed_matrix.size();
         int idx_min = -1;
         for (int j = 0; j < seed_matrix.size(); j++) {
             if(i!=j){
-                double dis = calc_L1_distance(seed_matrix[i], seed_matrix[j]);
+                FLOAT_TYPE dis = calc_L1_distance(seed_matrix[i], seed_matrix[j]);
                 if (dis_min > dis){
                     dis_min = dis;
                     idx_min = j;
@@ -307,7 +312,7 @@ select_base(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vec
     }
 
     std::sort(min_counter.begin(), min_counter.end(),
-        [](std::pair<int, double> a1, std::pair<int, double>a2){
+        [](std::pair<int, FLOAT_TYPE> a1, std::pair<int, FLOAT_TYPE>a2){
             return a1.second > a2.second;
     });
     unsigned int base_size = seed_matrix.size() * base_ratio;
@@ -321,20 +326,21 @@ select_base(std::vector<std::vector<double >> &seed_matrix, std::vector<std::vec
     return base_size;
 }
 
-inline std::vector<double>
-reuse_weight(std::vector<double> &raw_seed, std::vector<std::vector<double >> &base_matrix){
-    std::vector<double> base_weight(base_matrix.size(), 0.0);
-    for(double delta = 1; delta <= 16; delta *= 2){
-        double dis_min = base_matrix.size();
+template<class FLOAT_TYPE>
+inline std::vector<FLOAT_TYPE>
+reuse_weight(std::vector<FLOAT_TYPE> &raw_seed, std::vector<std::vector<FLOAT_TYPE >> &base_matrix){
+    std::vector<FLOAT_TYPE> base_weight(base_matrix.size(), 0.0);
+    for(FLOAT_TYPE delta = 1; delta <= 16; delta *= 2){
+        FLOAT_TYPE dis_min = base_matrix.size();
         int idx_min = 0;
         for(int j = 0; j < base_matrix.size(); j++){
-            double dis = calc_L1_distance(raw_seed, base_matrix[j]);
+            FLOAT_TYPE dis = calc_L1_distance(raw_seed, base_matrix[j]);
             if(dis_min > dis){
                 dis_min = dis;
                 idx_min = j;
             }
         }
-        double theta = calc_L1_residue(raw_seed, base_matrix[idx_min], 1.0);
+        FLOAT_TYPE theta = calc_L1_residue(raw_seed, base_matrix[idx_min], 1.0);
         if (abs(theta) / delta < 1 / 16) break;
         base_weight[idx_min] += theta;
     }

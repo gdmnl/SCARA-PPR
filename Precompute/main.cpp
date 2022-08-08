@@ -61,8 +61,8 @@ int main(int argc, char **argv) {
             size_t spt_right = std::min(feat_size, spt_left + spt_size);
             for (size_t i = spt_left; i < spt_right; i++) {
                 // printf("ID: %4d \n", i);
-                SpeedPPR::WHOLE_GRAPH_STRUCTURE<double> whole_graph_structure(V_num);
-                std::vector<double> seed(V_num, 0.0);
+                SpeedPPR::WHOLE_GRAPH_STRUCTURE<float> whole_graph_structure(V_num);
+                std::vector<float> seed(V_num, 0.0);
                 for (size_t j = 0; j < Vt_num; j++) {
                     seed[Vt_nodes[j]] = feature_matrix[j][i];
                 }
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
                                                          1.0 / V_num, walkCache);
                 total_time += getCurrentTime() - time_start;
 
-                // Save [F/split_num, n] array of all nodes to out_matrix
+                // Save embedding vector of feature i on all nodes to out_matrix
                 size_t idxf = i % spt_size;   // index of feature in split
                 for (size_t j = 0; j < V_num; j++) {
                     out_matrix[idxf*V_num+j] = whole_graph_structure.means[j];
@@ -110,28 +110,28 @@ int main(int argc, char **argv) {
         printf("Result size: %ld \n", out_matrix.size());
 
         // Select base
-        std::vector<std::vector<double>> seed_matrix;
+        std::vector<std::vector<float>> seed_matrix;
         for (int i = 0; i < feature_matrix[0].size(); i++) {
-            std::vector<double> seed;
+            std::vector<float> seed;
             for(int j = 0; j < feature_matrix.size(); j++){
                 seed.push_back(feature_matrix[j][i]);
             }
             seed_matrix.push_back(seed);
         }
         std::vector<int> base_nodes;
-        std::vector<std::vector<double>> base_matrix;
+        std::vector<std::vector<float>> base_matrix;
         size_t base_size = select_base(seed_matrix, base_matrix, base_nodes, param.base_ratio);
         MSG(base_size);
 
-        std::vector<std::vector<double>> base_result;
+        std::vector<std::vector<float>> base_result;
         double avg_tht = 0;     // base theta
         double avg_res = 0;     // reuse residue
         int re_feat_num = 0;    // number of reused features
 
         // Calculate base PPR
         for(size_t i = 0; i < base_size; i++){
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<double> whole_graph_structure(V_num);
-            std::vector<double> seed(V_num, 0.0);
+            SpeedPPR::WHOLE_GRAPH_STRUCTURE<float> whole_graph_structure(V_num);
+            std::vector<float> seed(V_num, 0.0);
             for(size_t j = 0; j < Vt_num; j++){
                 seed[Vt_nodes[j]] = base_matrix[i][j];
             }
@@ -144,65 +144,66 @@ int main(int argc, char **argv) {
         printf("Time Used on Base %.6f\n", total_time);
 
         // Calculate residue PPR
-        for (size_t i = 0; i < feat_size; i++) {
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<double> whole_graph_structure(V_num);
-            bool is_base = false;
-            for (size_t idx = 0; idx < base_size; idx++) {
-                if (base_nodes[idx] == i){
-                    // printf("ID: %4d  is base\n", i);
-                    is_base = true;
-                    for (size_t j = 0; j < V_num; j++)
-                        whole_graph_structure.means[j] = base_result[idx][j];
-                    break;
-                }
-            }
-            if (!is_base){
-                std::vector<double> raw_seed = seed_matrix[i];
-                std::vector<double> base_weight = reuse_weight(raw_seed, base_matrix);
-
-                double theta_sum = vector_L1(base_weight);
-                avg_tht += theta_sum;
-                avg_res += vector_L1(raw_seed);
-                // printf("ID: %4d, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(raw_seed));
-                // Ignore less relevant features
-                // if (theta_sum < 1.6) continue;
-                re_feat_num++;
-
-                std::vector<double> seed(V_num, 0.0);
-                for (size_t j = 0; j < Vt_num; j++) {
-                    seed[Vt_nodes[j]] = raw_seed[j];
-                }
-
-                double time_start = getCurrentTime();
-                speedPPR.compute_approximate_page_rank_3(whole_graph_structure, seed, param.epsilon, param.alpha,
-                                                         1.0 / V_num, walkCache, 2 - theta_sum * param.gamma);
-                total_time += getCurrentTime() - time_start;
-
-                for (size_t idx = 0; idx < base_size; idx++){
-                    if (base_weight[idx] != 0) {
+        for (size_t spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
+            size_t spt_right = std::min(feat_size, spt_left + spt_size);
+            for (size_t i = spt_left; i < spt_right; i++) {
+                SpeedPPR::WHOLE_GRAPH_STRUCTURE<float> whole_graph_structure(V_num);
+                bool is_base = false;
+                for (size_t idx = 0; idx < base_size; idx++) {
+                    if (base_nodes[idx] == i) {
+                        // printf("ID: %4d  is base\n", i);
+                        is_base = true;
                         for (size_t j = 0; j < V_num; j++)
-                            whole_graph_structure.means[j] += base_result[idx][j] * base_weight[idx];
+                            whole_graph_structure.means[j] = base_result[idx][j];
+                        break;
                     }
                 }
-            }
+                if (!is_base) {
+                    std::vector<float> raw_seed = seed_matrix[i];
+                    std::vector<float> base_weight = reuse_weight(raw_seed, base_matrix);
 
-            if (param.output_estimations) {
-                // Save [F/split_num, n] array of all nodes to out_matrix
+                    double theta_sum = vector_L1(base_weight);
+                    avg_tht += theta_sum;
+                    avg_res += vector_L1(raw_seed);
+                    // printf("ID: %4d, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(raw_seed));
+                    // Ignore less relevant features
+                    // if (theta_sum < 1.6) continue;
+                    re_feat_num++;
+
+                    std::vector<float> seed(V_num, 0.0);
+                    for (size_t j = 0; j < Vt_num; j++) {
+                        seed[Vt_nodes[j]] = raw_seed[j];
+                    }
+
+                    double time_start = getCurrentTime();
+                    speedPPR.compute_approximate_page_rank_3(whole_graph_structure, seed, param.epsilon, param.alpha,
+                                                            1.0 / V_num, walkCache, 2 - theta_sum * param.gamma);
+                    total_time += getCurrentTime() - time_start;
+
+                    for (size_t idx = 0; idx < base_size; idx++){
+                        if (base_weight[idx] != 0) {
+                            for (size_t j = 0; j < V_num; j++)
+                                whole_graph_structure.means[j] += base_result[idx][j] * base_weight[idx];
+                        }
+                    }
+                }
+
+                // Save embedding vector of feature i on all nodes to out_matrix
                 size_t idxf = i % spt_size;   // index of feature in split
                 for (size_t j = 0; j < V_num; j++) {
                     out_matrix[idxf*V_num+j] = whole_graph_structure.means[j];
                 }
+            }
 
-                size_t spt = i / spt_size;    // index of split
-                if (idxf+1 == spt_size || i+1 == feat_size) {
-                    std::stringstream res_file;
-                    if (param.split_num == 1) {
-                        res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
-                    } else {
-                        res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
-                    }
-                    output_feature(out_matrix, res_file.str(), idxf+1, Vt_num);
+            if (param.output_estimations) {
+                size_t spt = spt_left / spt_size;    // index of split
+                std::stringstream res_file;
+                if (param.split_num == 1) {
+                    res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
+                } else {
+                    res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
                 }
+                output_feature(out_matrix, res_file.str(), spt_right - spt_left, V_num);
             }
         }
 

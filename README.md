@@ -23,7 +23,7 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
   * `query.txt`: indices of queried nodes
 
 ### Precompute
-1. Environment: CMake 3.16, C++ 11. Dependencies (already included): [fast_double_parser](https://github.com/lemire/fast_double_parser), [SFMT](https://github.com/MersenneTwister-Lab/SFMT), [libnpy](https://github.com/llohse/libnpy/)
+1. Environment: CMake 3.16, C++ 11. Dependencies (already included): [SFMT](https://github.com/MersenneTwister-Lab/SFMT), [libnpy](https://github.com/llohse/libnpy/)
 2. CMake `cmake -B build`, then `make`
 3. Run script: `./run_pubmed.sh`
 

@@ -15,7 +15,6 @@
 #include "Graph.h"
 #include "MyQueue.h"
 #include "BatchRandomWalk.h"
-#include "fast_double_parser.h"
 
 
 class SpeedPPR {
@@ -118,8 +117,8 @@ public:
     template<class FLOAT_TYPE>
     void compute_approximate_page_rank_3(
             WHOLE_GRAPH_STRUCTURE<FLOAT_TYPE> &_whole_graph_structure,
-            const VertexIdType &_sid, const FLOAT_TYPE _epsilon,
-            const FLOAT_TYPE _alpha, const FLOAT_TYPE _lower_threshold,
+            const VertexIdType &_sid, const double _epsilon,
+            const double _alpha, const double _lower_threshold,
             const WalkCache &_walk_cache) {
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLOAT_TYPE>(graph.getNumOfEdges() / (double) graph.getNumOfVertices());
@@ -270,8 +269,8 @@ public:
     template<class FLOAT_TYPE>
     void compute_approximate_page_rank_3(
                 WHOLE_GRAPH_STRUCTURE<FLOAT_TYPE> &_whole_graph_structure,
-                const std::vector<double> &_seeds, const FLOAT_TYPE _epsilon,
-                const FLOAT_TYPE _alpha, const FLOAT_TYPE _lower_threshold,
+                const std::vector<FLOAT_TYPE> &_seeds, const double _epsilon,
+                const double _alpha, const double _lower_threshold,
                 const WalkCache &_walk_cache, const double gamma = 1.0) {
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLOAT_TYPE>(graph.getNumOfEdges() / (double) graph.getNumOfVertices());
