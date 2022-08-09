@@ -42,16 +42,21 @@ int main(int argc, char **argv) {
     }
 
     if (param.algorithm == "featpush"){
-        std::vector<VertexIdType> Vt_nodes; // list of queried nodes
-        std::vector<std::vector<float>> feature_matrix;
-        size_t Vt_num = load_query(Vt_nodes, param.query_file);
-        size_t feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num); // feature size
-        double total_time = 0;
+        // Process graph
         graph.reset_set_dummy_neighbor();
         graph.fill_dead_end_neighbor_with_id();
         VertexIdType V_num = graph.getNumOfVertices();
         class SpeedPPR speedPPR(graph);
         WalkCache walkCache(graph);
+        double total_time = 0;
+        double total_time2 = 0;
+        double total_time3 = 0;
+
+        // Process feature
+        std::vector<VertexIdType> Vt_nodes; // list of queried nodes
+        MyMatrix feature_matrix;
+        size_t Vt_num = load_query(Vt_nodes, param.query_file);
+        size_t feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num); // feature size
         size_t spt_size = (feat_size + param.split_num - 1) / param.split_num;    // feature size per split (ceiling)
         size_t out_size = spt_size * V_num; // length of output matrix
         std::vector<float> out_matrix(out_size);
@@ -60,23 +65,31 @@ int main(int argc, char **argv) {
         for (size_t spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
             size_t spt_right = std::min(feat_size, spt_left + spt_size);
             for (size_t i = spt_left; i < spt_right; i++) {
-                // printf("ID: %4d \n", i);
-                SpeedPPR::WHOLE_GRAPH_STRUCTURE<float> whole_graph_structure(V_num);
-                std::vector<float> seed(V_num, 0.0);
-                for (size_t j = 0; j < Vt_num; j++) {
-                    seed[Vt_nodes[j]] = feature_matrix[j][i];
-                }
-
+                // printf("ID: %4ld \n", i);
+                size_t idxf = i % spt_size;   // index of feature in split
                 double time_start = getCurrentTime();
+                SpeedPPR::WHOLE_GRAPH_STRUCTURE<float> whole_graph_structure(V_num);
+                std::vector<PageRankScoreType> seed;
+                if (Vt_num == V_num) {
+                    seed.swap(feature_matrix[i]);
+                } else {
+                    seed.resize(V_num, 0.0);
+                    for (size_t j = 0; j < Vt_num; j++) {
+                        seed[Vt_nodes[j]] = feature_matrix[i][j];
+                    }
+                }
+                total_time2 += getCurrentTime() - time_start;
+
+                time_start = getCurrentTime();
                 speedPPR.compute_approximate_page_rank_3(whole_graph_structure, seed, param.epsilon, param.alpha,
                                                          1.0 / V_num, walkCache);
                 total_time += getCurrentTime() - time_start;
 
                 // Save embedding vector of feature i on all nodes to out_matrix
-                size_t idxf = i % spt_size;   // index of feature in split
-                for (size_t j = 0; j < V_num; j++) {
-                    out_matrix[idxf*V_num+j] = whole_graph_structure.means[j];
-                }
+                time_start = getCurrentTime();
+                std::swap_ranges(whole_graph_structure.means.begin(), whole_graph_structure.means.end(),
+                                out_matrix.begin() + idxf*V_num);
+                total_time3 += getCurrentTime() - time_start;
             }
 
             if (param.output_estimations) {
@@ -93,37 +106,37 @@ int main(int argc, char **argv) {
 
         printf("Mem: %ld MB\n", get_proc_memory()/1000);
         printf("Total Time: %.6f, Average: %.12f\n", total_time, total_time / feat_size);
+        printf("Total Time2: %.6f, Average: %.12f\n", total_time2, total_time2 / feat_size);
+        printf("Total Time3: %.6f, Average: %.12f\n", total_time3, total_time3 / feat_size);
     } else if (param.algorithm == "featreuse"){
-        std::vector<VertexIdType> Vt_nodes; // list of queried nodes
-        std::vector<std::vector<float>> feature_matrix;
-        size_t Vt_num = load_query(Vt_nodes, param.query_file);
-        size_t feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num); // feature size
-        double total_time = 0;
+        // Process graph
         graph.reset_set_dummy_neighbor();
         graph.fill_dead_end_neighbor_with_id();
         VertexIdType V_num = graph.getNumOfVertices();
         class SpeedPPR speedPPR(graph);
         WalkCache walkCache(graph);
+        double total_time = 0;
+        double total_time2 = 0;
+        double total_time3 = 0;
+
+        // Process feature
+        std::vector<VertexIdType> Vt_nodes; // list of queried nodes
+        MyMatrix feature_matrix;
+        size_t Vt_num = load_query(Vt_nodes, param.query_file);
+        size_t feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num); // feature size
         size_t spt_size = (feat_size + param.split_num - 1) / param.split_num;    // feature size per split (ceiling)
         size_t out_size = spt_size * V_num; // length of output matrix
         std::vector<float> out_matrix(out_size);
         printf("Result size: %ld \n", out_matrix.size());
 
         // Select base
-        std::vector<std::vector<float>> seed_matrix;
-        for (int i = 0; i < feature_matrix[0].size(); i++) {
-            std::vector<float> seed;
-            for(int j = 0; j < feature_matrix.size(); j++){
-                seed.push_back(feature_matrix[j][i]);
-            }
-            seed_matrix.push_back(seed);
-        }
-        std::vector<int> base_nodes;
-        std::vector<std::vector<float>> base_matrix;
-        size_t base_size = select_base(seed_matrix, base_matrix, base_nodes, param.base_ratio);
+        MyMatrix base_matrix;
+        unsigned int base_size = feat_size * param.base_ratio;
+        base_size = std::max(3u, base_size);
+        std::vector<VertexIdType> base_nodes = select_base(feature_matrix, base_matrix, base_size);
         MSG(base_size);
 
-        std::vector<std::vector<float>> base_result;
+        MyMatrix base_result(base_size, V_num);
         double avg_tht = 0;     // base theta
         double avg_res = 0;     // reuse residue
         int re_feat_num = 0;    // number of reused features
@@ -139,7 +152,7 @@ int main(int argc, char **argv) {
             speedPPR.compute_approximate_page_rank_3(whole_graph_structure, seed, param.epsilon, param.alpha,
                                                      1.0 / V_num, walkCache, param.gamma);
             total_time += getCurrentTime() - time_start;
-            base_result.push_back(whole_graph_structure.means);
+            base_result.set_row(i, whole_graph_structure.means);
         }
         printf("Time Used on Base %.6f\n", total_time);
 
@@ -147,35 +160,44 @@ int main(int argc, char **argv) {
         for (size_t spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
             size_t spt_right = std::min(feat_size, spt_left + spt_size);
             for (size_t i = spt_left; i < spt_right; i++) {
+                size_t idxf = i % spt_size;   // index of feature in split
                 SpeedPPR::WHOLE_GRAPH_STRUCTURE<float> whole_graph_structure(V_num);
                 bool is_base = false;
                 for (size_t idx = 0; idx < base_size; idx++) {
                     if (base_nodes[idx] == i) {
-                        // printf("ID: %4d  is base\n", i);
+                        // printf("ID: %4ld  is base\n", i);
                         is_base = true;
-                        for (size_t j = 0; j < V_num; j++)
-                            whole_graph_structure.means[j] = base_result[idx][j];
+                        double time_start = getCurrentTime();
+                        std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix.begin() + idxf*V_num);
+                        total_time3 += getCurrentTime() - time_start;
                         break;
                     }
                 }
                 if (!is_base) {
-                    std::vector<float> raw_seed = seed_matrix[i];
+                    std::vector<PageRankScoreType> raw_seed;
+                    raw_seed.swap(feature_matrix[i]);
                     std::vector<float> base_weight = reuse_weight(raw_seed, base_matrix);
-
                     double theta_sum = vector_L1(base_weight);
                     avg_tht += theta_sum;
                     avg_res += vector_L1(raw_seed);
-                    // printf("ID: %4d, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(raw_seed));
+                    // printf("ID: %4ld, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(raw_seed));
                     // Ignore less relevant features
                     // if (theta_sum < 1.6) continue;
                     re_feat_num++;
 
-                    std::vector<float> seed(V_num, 0.0);
-                    for (size_t j = 0; j < Vt_num; j++) {
-                        seed[Vt_nodes[j]] = raw_seed[j];
-                    }
-
                     double time_start = getCurrentTime();
+                    std::vector<PageRankScoreType> seed;
+                    if (Vt_num == V_num) {
+                        seed.swap(raw_seed);
+                    } else {
+                        seed.resize(V_num, 0.0);
+                        for (size_t j = 0; j < Vt_num; j++) {
+                            seed[Vt_nodes[j]] = raw_seed[j];
+                        }
+                    }
+                    total_time2 += getCurrentTime() - time_start;
+
+                    time_start = getCurrentTime();
                     speedPPR.compute_approximate_page_rank_3(whole_graph_structure, seed, param.epsilon, param.alpha,
                                                             1.0 / V_num, walkCache, 2 - theta_sum * param.gamma);
                     total_time += getCurrentTime() - time_start;
@@ -186,12 +208,11 @@ int main(int argc, char **argv) {
                                 whole_graph_structure.means[j] += base_result[idx][j] * base_weight[idx];
                         }
                     }
-                }
-
-                // Save embedding vector of feature i on all nodes to out_matrix
-                size_t idxf = i % spt_size;   // index of feature in split
-                for (size_t j = 0; j < V_num; j++) {
-                    out_matrix[idxf*V_num+j] = whole_graph_structure.means[j];
+                    // Save embedding vector of feature i on all nodes to out_matrix
+                    time_start = getCurrentTime();
+                    std::swap_ranges(whole_graph_structure.means.begin(), whole_graph_structure.means.end(),
+                                     out_matrix.begin() + idxf*V_num);
+                    total_time3 += getCurrentTime() - time_start;
                 }
             }
 
@@ -214,6 +235,8 @@ int main(int argc, char **argv) {
         MSG(re_feat_num);
         printf("Mem: %ld MB\n", get_proc_memory()/1000);
         printf("Total Time: %.6f, Average: %.12f\n", total_time, total_time / feat_size);
+        printf("Total Time2: %.6f, Average: %.12f\n", total_time2, total_time2 / feat_size);
+        printf("Total Time3: %.6f, Average: %.12f\n", total_time3, total_time3 / feat_size);
     }
     printf("%s\n", std::string(80, '-').c_str());
     return 0;

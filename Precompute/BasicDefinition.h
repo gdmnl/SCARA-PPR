@@ -11,7 +11,7 @@
 
 typedef unsigned int VertexIdType;
 typedef unsigned int EdgeSizeType;
-typedef double PageRankScoreType;
+typedef float PageRankScoreType;
 
 
 template<class FLOAT_TYPE>

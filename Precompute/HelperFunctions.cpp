@@ -121,16 +121,16 @@ Param parseArgs(int nargs, char **args) {
             printf("Number of Split: %d\n", rtn.split_num);
         } else if (para == "epsilon") {
             rtn.epsilon = std::stod(getNextWord(arg));
-            printf("Epsilon: %.12f\n", rtn.epsilon);
+            printf("Epsilon: %.4f\n", rtn.epsilon);
         } else if (para == "alpha") {
             rtn.alpha = std::stod(getNextWord(arg));
-            printf("Alpha: %.12f\n", rtn.alpha);
+            printf("Alpha: %.4f\n", rtn.alpha);
         } else if (para == "gamma") {
             rtn.gamma = std::stod(getNextWord(arg));
-            printf("Gamma: %.12f\n", rtn.gamma);
+            printf("Gamma: %.4f\n", rtn.gamma);
         } else if (para == "base_ratio") {
             rtn.base_ratio = std::stod(getNextWord(arg));
-            printf("Base ratio: %.12f\n", rtn.base_ratio);
+            printf("Base ratio: %.4f\n", rtn.base_ratio);
         }  else {
             printf("Unknown option -%s!\n\n", para.c_str());
             exit(0);

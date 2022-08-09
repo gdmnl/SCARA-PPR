@@ -70,4 +70,79 @@ struct FwdPushStructure {
             is_active(numOfVertices + 1, false) {}
 };
 
+
+class MyMatrix {
+private:
+    // Use vector of vector instead of single vector, so directly assign vector
+    // value by std::vector.swap can be 2x faster
+    std::vector<std::vector<PageRankScoreType>> data;
+    VertexIdType nrow = 0;
+    VertexIdType ncol = 0;
+
+public:
+    explicit MyMatrix() {};
+
+    explicit MyMatrix(const VertexIdType &_nrows, const VertexIdType &_ncols) :
+        data(_nrows, std::vector<PageRankScoreType>(_ncols)),
+        nrow(_nrows),
+        ncol(_ncols) {}
+
+    void allocate(const VertexIdType &_nrows, const VertexIdType &_ncols) {
+        // data.resize(_nrows, std::vector<PageRankScoreType>(_ncols, 0));
+        data = std::vector<std::vector<PageRankScoreType>>(_nrows, std::vector<PageRankScoreType>(_ncols));
+        nrow = _nrows;
+        ncol = _ncols;
+    }
+
+    std::vector<PageRankScoreType> &operator[] (const VertexIdType &row) {
+        return data[row];
+    }
+
+    const std::vector<PageRankScoreType> &operator[] (const VertexIdType &row) const {
+        return data[row];
+    }
+
+    inline const VertexIdType &size() const {
+        return nrow;
+    }
+
+    inline const VertexIdType nrows() const {
+        return nrow;
+    }
+
+    inline const VertexIdType ncols() const {
+        return ncol;
+    }
+
+    inline bool empty() const {
+        return nrow == 0;
+    }
+
+    inline bool is_regular() const {
+        for (VertexIdType i = 0; i < nrow; ++i) {
+            if (data[i].size() != ncol) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    inline bool is_regular(const VertexIdType &row) const {
+        return data[row].size() == ncol;
+    }
+
+    inline void set_col(const VertexIdType &col, const std::vector<PageRankScoreType> &_data) {
+        assert(col < ncol);
+        assert(_data.size() == nrow);
+        for (VertexIdType i = 0; i < nrow; ++i) {
+            data[i][col] = _data[i];
+        }
+    }
+
+    inline void set_row(const VertexIdType &row, const std::vector<PageRankScoreType> &_data) {
+        data[row] = _data;
+    }
+};
+
+
 #endif //SPEEDPPR_MYQUEUE_H
