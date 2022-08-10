@@ -102,17 +102,11 @@ public:
         return data[row];
     }
 
-    inline const VertexIdType &size() const {
-        return nrow;
-    }
+    inline const VertexIdType &size() const { return nrow; }
 
-    inline const VertexIdType nrows() const {
-        return nrow;
-    }
+    inline const VertexIdType nrows() const { return nrow; }
 
-    inline const VertexIdType ncols() const {
-        return ncol;
-    }
+    inline const VertexIdType ncols() const { return ncol; }
 
     inline bool empty() const {
         return nrow == 0;

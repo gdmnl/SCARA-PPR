@@ -137,6 +137,5 @@ Param parseArgs(int nargs, char **args) {
         }
     }
     printf("%s\n", std::string(80, '-').c_str());
-    /*****************************************************************************/
     return rtn;
 }

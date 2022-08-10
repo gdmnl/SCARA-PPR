@@ -66,19 +66,12 @@ int main(int argc, char **argv) {
                 double time_start = getCurrentTime();
                 SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
                 std::vector<PageRankScoreType> seed;
-                if (Vt_num == V_num) {
-                    seed.swap(feature_matrix[i]);
-                } else {
-                    seed.resize(V_num, 0.0);
-                    for (VertexIdType j = 0; j < Vt_num; j++) {
-                        seed[Vt_nodes[j]] = feature_matrix[i][j];
-                    }
-                }
+                propagate_vector(feature_matrix[i], seed, Vt_nodes, V_num, true);
                 total_time2 += getCurrentTime() - time_start;
 
                 time_start = getCurrentTime();
                 speedPPR.compute_approximate_page_rank_3(graph_structure, seed, param.epsilon, param.alpha,
-                                                         1.0 / V_num, walkCache);
+                                                         (float) 1.0 / V_num, walkCache);
                 total_time += getCurrentTime() - time_start;
 
                 // Save embedding vector of feature i on all nodes to out_matrix
@@ -126,30 +119,28 @@ int main(int argc, char **argv) {
         printf("Result size: %ld \n", out_matrix.size());
 
         // Select base
-        MyMatrix base_matrix;
         VertexIdType base_size = feat_size * param.base_ratio;
         base_size = std::max(3u, base_size);
+        MyMatrix base_matrix(base_size, Vt_num);
         std::vector<VertexIdType> base_nodes = select_base(feature_matrix, base_matrix, base_size);
         MSG(base_size);
 
         MyMatrix base_result(base_size, V_num);
-        double avg_tht = 0;     // base theta
-        double avg_res = 0;     // reuse residue
+        PageRankScoreType avg_tht = 0;     // base theta
+        PageRankScoreType avg_res = 0;     // reuse residue
         VertexIdType re_feat_num = 0;    // number of reused features
 
         // Calculate base PPR
         for(VertexIdType i = 0; i < base_size; i++){
             double time_start = getCurrentTime();
             SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-            std::vector<PageRankScoreType> seed(V_num, 0.0);
-            for(VertexIdType j = 0; j < Vt_num; j++){
-                seed[Vt_nodes[j]] = base_matrix[i][j];
-            }
+            std::vector<PageRankScoreType> seed;
+            propagate_vector(base_matrix[i], seed, Vt_nodes, V_num, false);
             total_time2 += getCurrentTime() - time_start;
 
             time_start = getCurrentTime();
             speedPPR.compute_approximate_page_rank_3(graph_structure, seed, param.epsilon, param.alpha,
-                                                     1.0 / V_num, walkCache, param.gamma);
+                                                     (float) 1.0 / V_num, walkCache, param.gamma);
             total_time += getCurrentTime() - time_start;
 
             time_start = getCurrentTime();
@@ -179,7 +170,7 @@ int main(int argc, char **argv) {
                     std::vector<PageRankScoreType> raw_seed;
                     raw_seed.swap(feature_matrix[i]);
                     std::vector<PageRankScoreType> base_weight = reuse_weight(raw_seed, base_matrix);
-                    double theta_sum = vector_L1(base_weight);
+                    PageRankScoreType theta_sum = vector_L1(base_weight);
                     avg_tht += theta_sum;
                     avg_res += vector_L1(raw_seed);
                     // printf("ID: %4ld, theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(raw_seed));
@@ -189,19 +180,12 @@ int main(int argc, char **argv) {
 
                     double time_start = getCurrentTime();
                     std::vector<PageRankScoreType> seed;
-                    if (Vt_num == V_num) {
-                        seed.swap(raw_seed);
-                    } else {
-                        seed.resize(V_num, 0.0);
-                        for (VertexIdType j = 0; j < Vt_num; j++) {
-                            seed[Vt_nodes[j]] = raw_seed[j];
-                        }
-                    }
+                    propagate_vector(raw_seed, seed, Vt_nodes, V_num, true);
                     total_time2 += getCurrentTime() - time_start;
 
                     time_start = getCurrentTime();
                     speedPPR.compute_approximate_page_rank_3(graph_structure, seed, param.epsilon, param.alpha,
-                                                            1.0 / V_num, walkCache, 2 - theta_sum * param.gamma);
+                                                             (float) 1.0 / V_num, walkCache, 2 - theta_sum * param.gamma);
                     total_time += getCurrentTime() - time_start;
 
                     for (VertexIdType idx = 0; idx < base_size; idx++){

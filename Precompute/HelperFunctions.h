@@ -24,9 +24,17 @@
     #include <sys/resource.h>
 #endif
 
+
+// ==================== Runtime measurement
 extern double getCurrentTime();
 
+inline long get_proc_memory(){
+    struct rusage r_usage;
+    getrusage(RUSAGE_SELF,&r_usage);
+    return r_usage.ru_maxrss;
+}
 
+// ==================== Argument parsing
 inline uint32_t parse_integer(const std::string &_str, size_t &_end) {
     uint32_t rtn = 0;
     for (_end = 0; !isdigit(_str[_end]);) { ++_end; }
@@ -78,10 +86,10 @@ struct Param {
     std::string estimation_folder;
     unsigned int split_num = 1;
     unsigned int seed = 0;
-    double epsilon = 0.5;
-    double alpha = 0.2;
-    double gamma = 0.2;
-    double base_ratio = 0.04;
+    float epsilon = 0.5;
+    float alpha = 0.2;
+    float gamma = 0.2;
+    float base_ratio = 0.04;
     bool is_undirected_graph = false;
     bool output_estimations = false;
 };
@@ -97,6 +105,30 @@ inline T vector_L1(std::vector<T> Vec){
     for(auto a : Vec)
         sum += abs(a);
     return sum;
+}
+
+template<class FLOAT_TYPE>
+inline void propagate_vector(std::vector<FLOAT_TYPE> &_data, std::vector<FLOAT_TYPE> &_target,
+    const std::vector<VertexIdType> &_mapping, const VertexIdType &target_size, bool swap = false) {
+    if (target_size == _data.size()) {
+        if (swap) {
+            _data.swap(_target);
+        } else {
+            if (_target.empty()) {
+                _target.reserve(target_size);
+            }
+            std::copy(_data.begin(), _data.end(), _target.begin());
+        }
+    } else {
+        if (_target.empty()) {
+            _target.resize(target_size, 0.0);
+        } else {
+            std::fill(_target.begin(), _target.end(), 0.0);
+        }
+        for (VertexIdType j = 0; j < _data.size(); j++) {
+            _target[_mapping[j]] = _data[j];
+        }
+    }
 }
 
 template<class T>
@@ -174,14 +206,14 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, MyMatrix &feature_matrix,
         arr_np.clear();
         npy::LoadArrayFromNumpy(spt_path, shape, fortran_order, arr_np);
         auto feature_data = arr_np.data();
-        int nrows = shape[0];   // node num Vt_num/split_num
-        int ncols = shape[1];   // feature size F
+        VertexIdType nrows = shape[0];   // node num Vt_num/split_num
+        VertexIdType ncols = shape[1];   // feature size F
         if (feature_matrix.empty())
             feature_matrix.allocate(ncols, Vt_nodes.size());  // use feature as rows
         std::cout<<"Input "<<spt_path<<": "<<nrows<<" "<<ncols<<std::endl;
 
-        // Process each node vector of length F
-        for (int row = 0; row <nrows; row ++) {
+        // Save each node vector (of length F) to feature_matrix
+        for (VertexIdType row = 0; row < nrows; row ++) {
             if (sumrow + row == Vt_nodes[index]) {
                 index++;
                 std::vector<float> feature_array(feature_data+row*ncols, feature_data+row*ncols+ncols);
@@ -193,12 +225,6 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, MyMatrix &feature_matrix,
     }
     std::cout<<"Feature size: "<<feature_matrix.size()<<" "<<feature_matrix[0].size()<<std::endl;
     return feature_matrix.size();
-}
-
-inline long get_proc_memory(){
-    struct rusage r_usage;
-    getrusage(RUSAGE_SELF,&r_usage);
-    return r_usage.ru_maxrss;
 }
 
 #endif //SPEEDPPR_HELPERFUNCTIONS_H

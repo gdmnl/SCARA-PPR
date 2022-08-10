@@ -119,11 +119,11 @@ public:
     template<class FLOAT_TYPE>
     void compute_approximate_page_rank_3(
                 WHOLE_GRAPH_STRUCTURE<FLOAT_TYPE> &_whole_graph_structure,
-                const std::vector<FLOAT_TYPE> &_seeds, const double _epsilon,
-                const double _alpha, const double _lower_threshold,
-                const WalkCache &_walk_cache, const double gamma = 1.0) {
+                const std::vector<FLOAT_TYPE> &_seeds, const FLOAT_TYPE _epsilon,
+                const FLOAT_TYPE _alpha, const FLOAT_TYPE _lower_threshold,
+                const WalkCache &_walk_cache, const FLOAT_TYPE gamma = 1.0) {
         long long number_of_pushes = 0;
-        const auto avg_deg = static_cast<FLOAT_TYPE>(graph.getNumOfEdges() / (double) graph.getNumOfVertices());
+        const auto avg_deg = static_cast<FLOAT_TYPE>(graph.getNumOfEdges() / (FLOAT_TYPE) graph.getNumOfVertices());
         FLOAT_TYPE num_walks = ceil( (2 + (2.0 / 3.0) * _epsilon) * d_log_numOfVertices /
                                     (_epsilon * _epsilon * _lower_threshold) / gamma );
         auto &active_vertices = _whole_graph_structure.active_vertices;
@@ -143,13 +143,6 @@ public:
             }
         }
 
-        /*
-        double rsum = 0.0;
-        for(int i = 0; i < graph.getNumOfVertices(); i++){
-            rsum += residuals[i];
-        }
-        std::cout<< "rsum: " << rsum << std::endl;
-        */
         uint32_t num_active = 0;
         const FLOAT_TYPE one_minus_alpha = 1.0 - _alpha;
         const VertexIdType queue_threshold = (numOfVertices / avg_deg * 4);
@@ -268,7 +261,7 @@ public:
             const VertexIdType &_sid, const FLOAT_TYPE _epsilon,
             const FLOAT_TYPE _alpha, const FLOAT_TYPE _lower_threshold) {
         long long number_of_pushes = 0;
-        const auto avg_deg = static_cast<FLOAT_TYPE>(graph.getNumOfEdges() / (double) graph.getNumOfVertices());
+        const auto avg_deg = static_cast<FLOAT_TYPE>(graph.getNumOfEdges() / (FLOAT_TYPE) graph.getNumOfVertices());
         FLOAT_TYPE time_scaling_factor = 1.0;
         FLOAT_TYPE one_over_time_scaling_factor = 1.0 / time_scaling_factor;
         FLOAT_TYPE num_walks = one_over_time_scaling_factor * ceil((2 + (2.0 / 3.0) * _epsilon) * d_log_numOfVertices /
@@ -429,7 +422,7 @@ public:
         // random walks
         do {
             means.swap(pi);
-            double r_sum = 0;
+            FLOAT_TYPE r_sum = 0;
             auto &active_ids = _whole_graph_structure.active_ids;
             auto &active_residuals = _whole_graph_structure.active_residuals;
             auto &current_vertices = _whole_graph_structure.current_vertices;
