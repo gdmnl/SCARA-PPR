@@ -5,8 +5,9 @@
 
 #include <queue>
 
-typedef unsigned int VertexIdType;
-typedef unsigned int EdgeSizeType;
+typedef unsigned long VertexIdType;
+typedef unsigned long EdgeSizeType;
+#define IDFMT "lu"
 typedef float PageRankScoreType;
 
 

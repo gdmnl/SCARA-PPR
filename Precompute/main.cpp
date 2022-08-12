@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 
         // Select base
         VertexIdType base_size = feat_size * param.base_ratio;
-        base_size = std::max(3u, base_size);
+        base_size = std::max((VertexIdType) 3u, base_size);
         MyMatrix base_matrix(base_size, Vt_num);
         std::vector<VertexIdType> base_nodes = select_base(feature_matrix, base_matrix, base_size);
         MSG(base_size);

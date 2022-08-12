@@ -148,7 +148,7 @@ public:
             for (VertexIdType prev_id = 0, id = 1; id < graph.getNumOfVertices(); ++prev_id, ++id) {
                 start_indices[id] =
                         start_indices[prev_id]
-                        + std::max(1u, graph.original_out_degree(prev_id))
+                        + std::max((VertexIdType) 1u, graph.original_out_degree(prev_id))
                         + num_zero_walks;
             }
         } else {

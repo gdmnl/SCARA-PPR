@@ -161,8 +161,8 @@ public:
                 size_t start2 = line.find_first_of('=');
                 numOfEdges = std::stoul(line.substr(start2 + 1));
                 dummy_id = numOfVertices;
-                printf("The Number of Vertices: %d\n", numOfVertices);
-                printf("The Number of Edges: %d\n", numOfEdges);
+                // printf("The Number of Vertices: %" IDFMT "\n", numOfVertices);
+                // printf("The Number of Edges: %" IDFMT "\n", numOfEdges);
                 attribute_file.close();
             } else {
                 printf(__FILE__ "; LINE %d; File Not Exists.\n", __LINE__);
@@ -212,7 +212,7 @@ public:
 //        }
 
         // process the dead_end
-        uint32_t degree_max = 0;
+        VertexIdType degree_max = 0;
         deadend_vertices.clear();
         for (VertexIdType i = 0; i < numOfVertices; ++i) {
             if (out_degrees[i] == 0) {
@@ -221,7 +221,7 @@ public:
             degree_max = std::max(degree_max, out_degrees[i]);
         }
         num_deadend_vertices = deadend_vertices.size();
-        printf("The number of dead end vertices:%d\n", num_deadend_vertices);
+        printf("The number of dead end vertices:%" IDFMT "\n", num_deadend_vertices);
 
         // process pos_list list
         start_pos_in_appearance_pos_lists.clear();
@@ -236,7 +236,7 @@ public:
         start_pos_in_out_neighbor_lists.resize(numOfVertices + 2, 0);
         for (VertexIdType current_id = 0, next_id = 1; next_id < numOfVertices + 1; ++current_id, ++next_id) {
             start_pos_in_out_neighbor_lists[next_id] =
-                    start_pos_in_out_neighbor_lists[current_id] + std::max(out_degrees[current_id], 1u);
+                    start_pos_in_out_neighbor_lists[current_id] + std::max(out_degrees[current_id], (VertexIdType) 1u);
         }
         // process dummy vertex
         assert(start_pos_in_out_neighbor_lists[numOfVertices] == numOfEdges + deadend_vertices.size());
@@ -249,8 +249,8 @@ public:
         // fill the edge list
         out_neighbors_lists.clear();
         out_neighbors_lists.resize(numOfEdges + num_deadend_vertices + degree_max, 0);
-        uint32_t edges_processed = 0;
-        uint32_t msg_gap = std::max(1u, numOfEdges / 10);
+        VertexIdType edges_processed = 0;
+        VertexIdType msg_gap = std::max((VertexIdType) 1u, numOfEdges / 10);
         std::vector<std::pair<VertexIdType, VertexIdType>> position_pair;
         position_pair.reserve(numOfEdges);
         for (auto &edge : edges) {
@@ -282,7 +282,7 @@ public:
 //        MSG(time_sort_end - time_sort_start);
         appearance_pos_lists.clear();
         appearance_pos_lists.resize(numOfEdges + num_deadend_vertices + degree_max, 0);
-        uint32_t in_pos_pair = 0;
+        VertexIdType in_pos_pair = 0;
         for (const auto &pair : position_pair) {
             const VertexIdType &to_id = pair.first;
             const VertexIdType &pos = pair.second;
@@ -308,7 +308,7 @@ public:
 
     void show() const {
         // we need to show the dummy
-        const VertexIdType num_to_show = std::min(numOfVertices + 1, 50u);
+        const VertexIdType num_to_show = std::min(numOfVertices + 1, (VertexIdType) 50u);
         // show the first elements
         show_vector("The Out Degrees of The Vertices:",
                     std::vector<VertexIdType>(out_degrees.data(), out_degrees.data() + num_to_show));
@@ -324,25 +324,25 @@ public:
         show_vector("Out Neighbor Lists:",
                     std::vector<VertexIdType>(out_neighbors_lists.data(),
                                               out_neighbors_lists.data() +
-                                              std::min(numOfEdges + num_deadend_vertices, 50u)));
+                                              std::min(numOfEdges + num_deadend_vertices, (VertexIdType) 50u)));
         show_vector("The Appearance Positions of Vertices in the Out Neighbor Lists:",
                     std::vector<VertexIdType>(appearance_pos_lists.data(),
-                                              appearance_pos_lists.data() + std::min(numOfEdges, 50u)));
+                                              appearance_pos_lists.data() + std::min(numOfEdges, (VertexIdType) 50u)));
 //        show_vector("The adj list of the middel vertex", matrix[numOfVertices / 2]);
         printf("The position the id appears in outNeighbor List:\n");
         for (VertexIdType id = 0; id < numOfVertices; ++id) {
             const VertexIdType &idx_start = start_pos_in_appearance_pos_lists[id];
             const VertexIdType &idx_end = start_pos_in_appearance_pos_lists[id + 1];
-            printf("Id:%u;\tPositions: ", id);
+            printf("Id:%" IDFMT ";\tPositions: ", id);
             for (VertexIdType index = idx_start; index < idx_end; ++index) {
-                printf("%u, ", appearance_pos_lists[index]);
+                printf("%" IDFMT ", ", appearance_pos_lists[index]);
             }
             printf("\n");
         }
         show_vector("Dead End Vertices List:",
                     std::vector<VertexIdType>(deadend_vertices.data(),
                                               deadend_vertices.data() +
-                                              std::min(num_deadend_vertices, 50u)));
+                                              std::min(num_deadend_vertices, (VertexIdType) 50u)));
         printf("\n%s\n", std::string(80, '-').c_str());
     }
 };
@@ -403,19 +403,19 @@ public:
         /* final count */
         printf("%zu Lines Read.\n", num_lines);
         numOfEdges = edges.size();
-        printf("%d-th Non-Self Loop Edges.\n", numOfEdges);
+        printf("%" IDFMT "-th Non-Self Loop Edges.\n", numOfEdges);
         printf("Finish Reading.\n");
         printf("%s\n", std::string(80, '-').c_str());
 
         // find the maximum id
         size_t id_max = 0;
-        size_t id_min = std::numeric_limits<uint32_t>::max();
+        size_t id_min = std::numeric_limits<uint64_t>::max();
         for (const auto &pair : edges) {
             id_max = std::max(id_max, (size_t) std::max(pair.from_id, pair.to_id));
             id_min = std::min(id_min, (size_t) std::min(pair.from_id, pair.to_id));
         }
         printf("Minimum ID: %zu, Maximum ID: %zu\n", id_min, id_max);
-        if (id_max >= std::numeric_limits<uint32_t>::max()) {
+        if (id_max >= std::numeric_limits<uint64_t>::max()) {
             printf("Warning: Change VertexIdType First.\n");
             exit(1);
         }
@@ -428,9 +428,9 @@ public:
             ++in_degree[edge.to_id];
         }
         // count the number of dead-end vertices
-        uint32_t original_dead_end_num = 0;
-        uint32_t num_isolated_points = 0;
-        uint32_t max_degree = 0;
+        VertexIdType original_dead_end_num = 0;
+        VertexIdType num_isolated_points = 0;
+        VertexIdType max_degree = 0;
         for (VertexIdType id = 0; id < one_plus_id_max; ++id) {
             if (out_degree[id] == 0) {
                 ++original_dead_end_num;
@@ -441,9 +441,9 @@ public:
             // compute maximum out degree
             max_degree = std::max(out_degree[id], max_degree);
         }
-        printf("The number of dead end vertices: %u\n", original_dead_end_num);
-        printf("The number of isolated points: %u\n", num_isolated_points);
-        printf("The maximum out degree is: %u\n", max_degree);
+        printf("The number of dead end vertices: %" IDFMT "\n", original_dead_end_num);
+        printf("The number of isolated points: %" IDFMT "\n", num_isolated_points);
+        printf("The maximum out degree is: %" IDFMT "\n", max_degree);
 
         // we assume the vertice ids are in the arrange of 0 ... numOfVertices - 1
         numOfVertices = one_plus_id_max;
@@ -455,7 +455,7 @@ public:
         numOfEdges = edges.size();
         std::string attribute_file = _data_folder + '/' + "attribute.txt";
         if (std::FILE *file = std::fopen(attribute_file.c_str(), "w")) {
-            std::fprintf(file, "n=%d\nm=%d\n", numOfVertices, numOfEdges);
+            std::fprintf(file, "n=%" IDFMT "\nm=%" IDFMT "\n", numOfVertices, numOfEdges);
             std::fclose(file);
         } else {
             printf("Graph::clean_graph; File Not Exists.\n");
