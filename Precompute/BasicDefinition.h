@@ -5,10 +5,6 @@
 
 #include <queue>
 
-#ifndef FAST_READ
-#define FAST_READ
-#endif
-
 typedef unsigned int VertexIdType;
 typedef unsigned int EdgeSizeType;
 typedef float PageRankScoreType;

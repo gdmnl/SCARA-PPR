@@ -50,7 +50,7 @@ Param param;
 
 Param parseArgs(int nargs, char **args) {
     std::vector<std::string> Algorithms{
-            "clean_graph", "featpush", "featreuse",
+        "featpush", "featreuse",
     };
 
     Param rtn;
@@ -77,41 +77,30 @@ Param parseArgs(int nargs, char **args) {
             rtn.algorithm = std::string(arg);
             std::cout << "Algorithm Parameter: " << rtn.algorithm << std::endl;
             if (algo_set.find(rtn.algorithm) == algo_set.end()) {
-                printf("Algorithm Unknown.\n");
+                printf("Unknown Algorithm.\n");
                 exit(0);
             }
-        } else if (para == "graph") {
-            rtn.graph_file = getNextWord(arg);
-            printf("Input Graph File: %s\n", rtn.graph_file.c_str());
-        } else if (para == "graph_binary") {
-            rtn.graph_binary_file = getNextWord(arg);
-            printf("Input Graph Binary File: %s\n", rtn.graph_binary_file.c_str());
-        } else if (para == "is_undirected") {
-            auto option = getNextWord(arg);
-            if (option == "yes") {
-                rtn.is_undirected_graph = true;
-            } else if (option == "no") {
-                rtn.is_undirected_graph = false;
-            } else {
-                printf("Unknown option -%s!\n", option.c_str());
-                exit(0);
-            }
-            std::cout << "Is Undirected: " << rtn.is_undirected_graph << "\n";
-        } else if (para == "meta") {
-            rtn.meta_file = getNextWord(arg);
-            printf("Input Meta File: %s\n", rtn.meta_file.c_str());
-        } else if (para == "query") {
-            rtn.query_file = getNextWord(arg);
-            printf("Input Query File: %s\n", rtn.query_file.c_str());
-        } else if (para == "output_folder") {
-            rtn.output_folder = getNextWord(arg);
-            printf("Output Folder: %s\n", rtn.output_folder.c_str());
+        } else if (para == "data_folder") {
+            rtn.data_folder = getNextWord(arg);
+            printf("Data Folder: %s\n", rtn.data_folder.c_str());
         } else if (para == "estimation_folder") {
             rtn.output_estimations = true;
             rtn.estimation_folder = getNextWord(arg);
             printf("Estimation Folder: %s\n", rtn.estimation_folder.c_str());
-        } else if (para == "feature_file") {
+        } else if (para == "graph") {
+            rtn.graph_file = getNextWord(arg);
+            if (!rtn.data_folder.empty())
+                rtn.graph_file = rtn.data_folder + "/" + rtn.graph_file;
+            printf("Input Graph File: %s\n", rtn.graph_file.c_str());
+        } else if (para == "query") {
+            rtn.query_file = getNextWord(arg);
+            if (!rtn.data_folder.empty())
+                rtn.query_file = rtn.data_folder + "/" + rtn.query_file;
+            printf("Input Query File: %s\n", rtn.query_file.c_str());
+        } else if (para == "feats") {
             rtn.feature_file = getNextWord(arg);
+            if (!rtn.data_folder.empty())
+                rtn.feature_file = rtn.data_folder + "/" + rtn.feature_file;
             printf("Feature File: %s\n", rtn.feature_file.c_str());
         } else if (para == "seed") {
             rtn.seed = std::stoi(getNextWord(arg));

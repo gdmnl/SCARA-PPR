@@ -1,16 +1,13 @@
-
-
 #ifndef SPEEDPPR_GRAPH_H
 #define SPEEDPPR_GRAPH_H
-
-#ifndef USE_REVERSE_POS
-#define USE_REVERSE_POS
-#endif
 
 #include <string>
 #include <vector>
 #include <algorithm>
 #include <cassert>
+#include <limits>
+#include <unordered_set>
+#include <iostream>
 #include <fstream>
 #include "BasicDefinition.h"
 #include "HelperFunctions.h"
@@ -245,7 +242,6 @@ public:
         assert(start_pos_in_out_neighbor_lists[numOfVertices] == numOfEdges + deadend_vertices.size());
         out_degrees[dummy_id] = 0;
         start_pos_in_out_neighbor_lists[numOfVertices + 1] = start_pos_in_out_neighbor_lists[numOfVertices];
-        ////////////////////////////////////////////////////////////
 
         // compute the positions
         std::vector<VertexIdType> out_positions_to_fill(start_pos_in_out_neighbor_lists.begin(),
@@ -275,7 +271,8 @@ public:
         }
         edges.clear();
         MSG(edges_processed);
-#ifdef USE_REVERSE_POS
+
+        // use reverse position
         std::vector<VertexIdType> in_positions_to_fill(start_pos_in_appearance_pos_lists.begin(),
                                                        start_pos_in_appearance_pos_lists.end());
         in_positions_to_fill[numOfVertices] = numOfEdges;
@@ -297,12 +294,13 @@ public:
             //     MSG(in_pos_pair);
             // }
         }
-#endif
 
         // fill the dummy ids
         for (const VertexIdType &id : deadend_vertices) {
             out_neighbors_lists[out_positions_to_fill[id]++] = dummy_id;
         }
+        assert(get_neighbor_list_start_pos(get_dummy_id()) ==
+               get_neighbor_list_start_pos(get_dummy_id() + 1));
         const double time_end = getCurrentTime();
         // printf("Graph Build Finished. TIME: %.4f\n", time_end - start);
         printf("%s\n", std::string(80, '-').c_str());
@@ -346,6 +344,137 @@ public:
                                               deadend_vertices.data() +
                                               std::min(num_deadend_vertices, 50u)));
         printf("\n%s\n", std::string(80, '-').c_str());
+    }
+};
+
+
+class CleanGraph {
+    VertexIdType numOfVertices = 0;
+    EdgeSizeType numOfEdges = 0;
+public:
+
+    void clean_graph(const std::string &_input_file,
+                     const std::string &_data_folder) {
+        std::ifstream inf(_input_file.c_str());
+        if (!inf.is_open()) {
+            printf("CleanGraph::clean_graph; File not exists.\n");
+            printf("%s\n", _input_file.c_str());
+            exit(1);
+        }
+        // status indicator
+        // printf("\nReading Input Graph\n");
+
+        std::string line;
+        /**
+         * skip the headers, we assume the headers are the comments that
+         * begins with '#'
+         */
+        while (std::getline(inf, line) && line[0] == '#') {}
+        if (line.empty() || !isdigit(line[0])) {
+            printf("Error in CleanGraph::clean_graph. Raw File Format Error.\n");
+            printf("%s\n", line.c_str());
+            exit(1);
+        }
+        // create temporary graph
+        std::vector<Edge> edges;
+        numOfEdges = 0;
+        /**
+         * read the raw file
+         */
+        size_t num_lines = 0;
+        // process the first line
+        {
+            VertexIdType fromId, toID;
+            ++num_lines;
+            size_t end = 0;
+            fromId = std::stoul(line, &end);
+            toID = std::stoul(line.substr(end));
+            // remove self-loops
+            edges.emplace_back(fromId, toID);
+        }
+        // read the edges
+        for (VertexIdType fromId, toID; inf >> fromId >> toID;) {
+            edges.emplace_back(fromId, toID);
+            if (++num_lines % 5000000 == 0) { printf("%zu Valid Lines Read.\n", num_lines); }
+        }
+
+        // close the file
+        inf.close();
+        /* final count */
+        printf("%zu Lines Read.\n", num_lines);
+        numOfEdges = edges.size();
+        printf("%d-th Non-Self Loop Edges.\n", numOfEdges);
+        printf("Finish Reading.\n");
+        printf("%s\n", std::string(80, '-').c_str());
+
+        // find the maximum id
+        size_t id_max = 0;
+        size_t id_min = std::numeric_limits<uint32_t>::max();
+        for (const auto &pair : edges) {
+            id_max = std::max(id_max, (size_t) std::max(pair.from_id, pair.to_id));
+            id_min = std::min(id_min, (size_t) std::min(pair.from_id, pair.to_id));
+        }
+        printf("Minimum ID: %zu, Maximum ID: %zu\n", id_min, id_max);
+        if (id_max >= std::numeric_limits<uint32_t>::max()) {
+            printf("Warning: Change VertexIdType First.\n");
+            exit(1);
+        }
+        const VertexIdType one_plus_id_max = id_max + 1;
+        std::vector<VertexIdType> out_degree(one_plus_id_max, 0);
+        std::vector<VertexIdType> in_degree(one_plus_id_max, 0);
+        // compute the degrees.
+        for (const auto &edge : edges) {
+            ++out_degree[edge.from_id];
+            ++in_degree[edge.to_id];
+        }
+        // count the number of dead-end vertices
+        uint32_t original_dead_end_num = 0;
+        uint32_t num_isolated_points = 0;
+        uint32_t max_degree = 0;
+        for (VertexIdType id = 0; id < one_plus_id_max; ++id) {
+            if (out_degree[id] == 0) {
+                ++original_dead_end_num;
+                if (in_degree[id] == 0) {
+                    ++num_isolated_points;
+                }
+            }
+            // compute maximum out degree
+            max_degree = std::max(out_degree[id], max_degree);
+        }
+        printf("The number of dead end vertices: %u\n", original_dead_end_num);
+        printf("The number of isolated points: %u\n", num_isolated_points);
+        printf("The maximum out degree is: %u\n", max_degree);
+
+        // we assume the vertice ids are in the arrange of 0 ... numOfVertices - 1
+        numOfVertices = one_plus_id_max;
+
+        // sort the edges
+        std::sort(edges.begin(), edges.end());
+
+        // Write the attribute file
+        numOfEdges = edges.size();
+        std::string attribute_file = _data_folder + '/' + "attribute.txt";
+        if (std::FILE *file = std::fopen(attribute_file.c_str(), "w")) {
+            std::fprintf(file, "n=%d\nm=%d\n", numOfVertices, numOfEdges);
+            std::fclose(file);
+        } else {
+            printf("Graph::clean_graph; File Not Exists.\n");
+            printf("%s\n", attribute_file.c_str());
+            exit(1);
+        }
+
+        // write the graph in binary
+        std::string graph_bin_file = _data_folder + '/' + "graph.bin";
+        if (std::FILE *file = std::fopen(graph_bin_file.c_str(), "wb")) {
+            std::fwrite(edges.data(), sizeof edges[0], edges.size(), file);
+            printf("Writing Binary Finished.\n");
+            std::fclose(file);
+        } else {
+            printf("Graph::clean_graph; File Not Exists.\n");
+            printf("%s\n", graph_bin_file.c_str());
+            exit(1);
+        }
+        printf("%s\n", std::string(80, '-').c_str());
     }
 };
 

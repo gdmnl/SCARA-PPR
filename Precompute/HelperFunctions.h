@@ -78,11 +78,9 @@ inline double parse_double(const std::string &_str, const size_t &_start, size_t
 struct Param {
     std::string graph_file;
     std::string query_file;
-    std::string meta_file;
     std::string feature_file;
-    std::string graph_binary_file;
     std::string algorithm = "featpush";
-    std::string output_folder;
+    std::string data_folder;
     std::string estimation_folder;
     unsigned int split_num = 1;
     unsigned int seed = 0;
@@ -90,7 +88,6 @@ struct Param {
     float alpha = 0.2;
     float gamma = 0.2;
     float base_ratio = 0.04;
-    bool is_undirected_graph = false;
     bool output_estimations = false;
 };
 

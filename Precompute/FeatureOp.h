@@ -15,20 +15,21 @@ calc_L1_residue(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2, float 
     VertexIdType index;
     FLOAT_TYPE used_sum = 0;
     FLOAT_TYPE theta;
-    std::vector<std::pair<VertexIdType, FLOAT_TYPE>> theta_counter;
+    // std::vector<std::pair<VertexIdType, FLOAT_TYPE>> theta_counter;
+    std::vector<IdScorePair<FLOAT_TYPE>> theta_counter;
     for (VertexIdType i = 0; i < V1.size(); i++) {
         if (V2[i] != 0) {
             theta = V1[i] / V2[i];
-            theta_counter.push_back(std::make_pair(i, theta));
+            theta_counter.push_back({i, theta});
         }
     }
     std::sort(theta_counter.begin(), theta_counter.end(),
-              [](std::pair<FLOAT_TYPE, VertexIdType> a, std::pair<FLOAT_TYPE, VertexIdType> b) {
-                  return fabs(a.second) < fabs(b.second);
+              [](const IdScorePair<FLOAT_TYPE> &a, const IdScorePair<FLOAT_TYPE> &b) {
+                  return fabs(a.score) < fabs(b.score);
               });
     for (VertexIdType i = 0; i < theta_counter.size(); i += 1) {
-        index = theta_counter[i].first;
-        theta = theta_counter[i].second;
+        index = theta_counter[i].id;
+        theta = theta_counter[i].score;
         used_sum += fabs(V2[index]);
         if (used_sum > 0.5 || index == -1)
             break;
@@ -116,8 +117,8 @@ calc_L2_distance(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2) {
 // ==================== Reuse functions
 inline std::vector<VertexIdType>
 select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix, size_t base_size) {
-    std::vector<VertexIdType> base_nodes(base_size, 0);                                                                // list of base nodes
-    std::vector<std::pair<VertexIdType, PageRankScoreType>> min_counter(feature_matrix.size(), std::make_pair(0, 0));  // (min norm base, min norm) for each feature
+    std::vector<VertexIdType> base_nodes(base_size, 0);                                        // list of base nodes
+    std::vector<IdScorePair<PageRankScoreType>> min_counter(feature_matrix.size(), {0, 0.0});  // (min base id, min norm) for each feature
     // Find minimum distance feature for each feature
     for (VertexIdType i = 0; i < feature_matrix.size(); i++) {
         PageRankScoreType dis_min = 4.0 * feature_matrix.size();
@@ -133,21 +134,18 @@ select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix, size_t base_size) {
         }
         // printf("id: %4d, dis: %.8f, tar: %4d\n", i, dis_min, idx_min);
         if (idx_min < 0 || idx_min > feature_matrix.size()) continue;
-        min_counter[idx_min].first = idx_min;
+        min_counter[idx_min].id = idx_min;
         // Add weight for counter, distance closer to 1 is smaller weight
-        min_counter[idx_min].second += fabs(1 - dis_min);
+        min_counter[idx_min].score += fabs(1 - dis_min);
     }
 
     // Decide base features with most closest features
-    std::sort(min_counter.begin(), min_counter.end(),
-              [](std::pair<VertexIdType, PageRankScoreType> a1, std::pair<VertexIdType, PageRankScoreType> a2) {
-                  return a1.second > a2.second;
-              });
+    std::sort(min_counter.begin(), min_counter.end(), IdScorePairComparatorGreater<PageRankScoreType>());
     for (VertexIdType i = 0; i < base_size; i++) {
-        // printf("Base %4d: dis: %.8f, tar: %4d\n", i, min_counter[i].second, min_counter[i].first);
-        base_matrix.set_row(i, feature_matrix[min_counter[i].first]);
-        // base_matrix[i].swap(feature_matrix[min_counter[i].first]);
-        base_nodes[i] = min_counter[i].first;
+        // printf("Base %4d: dis: %.8f, tar: %4d\n", i, min_counter[i].score, min_counter[i].id);
+        base_matrix.set_row(i, feature_matrix[min_counter[i].id]);
+        // base_matrix[i].swap(feature_matrix[min_counter[i].id]);
+        base_nodes[i] = min_counter[i].id;
     }
     return base_nodes;
 }

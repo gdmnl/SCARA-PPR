@@ -2,7 +2,6 @@
 #include "Graph.h"
 #include "BatchRandomWalk.h"
 #include "SpeedPPR.h"
-#include "CleanGraph.h"
 #include "FeatureOp.h"
 #include <unistd.h>
 #include <thread>
@@ -17,25 +16,12 @@ int main(int argc, char **argv) {
     SFMT64::initialize(param.seed);
     Graph graph;
     graph.set_alpha(param.alpha);
-
-    if (param.algorithm == "clean_graph") {
+    std::ifstream bin_file(param.data_folder + "/graph.bin");
+    if (!bin_file.good()) {
         CleanGraph cleaner;
-        if (param.is_undirected_graph) {
-            std::string output_file = param.output_folder + "/" + "edge_duplicated_graph.txt";
-            cleaner.duplicate_edges(param.graph_file, output_file);
-            cleaner.clean_graph(output_file, param.output_folder);
-        } else {
-            cleaner.clean_graph(param.graph_file, param.output_folder);
-        }
-        return 0;
-    } else if (!param.graph_binary_file.empty()) {
-        graph.read_binary(param.meta_file, param.graph_binary_file);
-        assert(graph.get_neighbor_list_start_pos(graph.get_dummy_id()) ==
-               graph.get_neighbor_list_start_pos(graph.get_dummy_id() + 1));
-    } else {
-        printf("Error in" __FILE__ " LINE %d. Fail to load the graph.\n", __LINE__);
-        return 0;
+        cleaner.clean_graph(param.graph_file, param.data_folder);
     }
+    graph.read_binary(param.data_folder + "/attribute.txt", param.data_folder + "/graph.bin");
 
     if (param.algorithm == "featpush"){
         // Process graph
