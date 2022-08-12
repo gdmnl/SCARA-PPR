@@ -43,6 +43,7 @@ struct Param {
     std::string data_folder;
     std::string estimation_folder;
     unsigned int split_num = 1;
+    unsigned int thread_num = 1;
     unsigned int seed = 0;
     float epsilon = 0.5;
     float alpha = 0.2;
