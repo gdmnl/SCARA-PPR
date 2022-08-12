@@ -85,13 +85,16 @@ public:
     explicit MyMatrix(const VertexIdType &_nrows, const VertexIdType &_ncols) :
         data(_nrows, std::vector<PageRankScoreType>(_ncols)),
         nrow(_nrows),
-        ncol(_ncols) {}
+        ncol(_ncols) {
+        // std::cout << "Init Matrix of: " << nrow << " " << ncol << std::endl;
+    }
 
     void allocate(const VertexIdType &_nrows, const VertexIdType &_ncols) {
         // data.resize(_nrows, std::vector<PageRankScoreType>(_ncols, 0));
         data = std::vector<std::vector<PageRankScoreType>>(_nrows, std::vector<PageRankScoreType>(_ncols));
         nrow = _nrows;
         ncol = _ncols;
+        // std::cout << "Allocate Matrix of: " << nrow << " " << ncol << std::endl;
     }
 
     std::vector<PageRankScoreType> &operator[] (const VertexIdType &row) {

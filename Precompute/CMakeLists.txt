@@ -15,6 +15,6 @@ add_executable(featpush main.cpp
     HelperFunctions.h HelperFunctions.cpp npy.hpp
     BatchRandomWalk.cpp BatchRandomWalk.h
     MyQueue.h MyRandom.cpp MyRandom.h
-    FeatureOp.h SpeedPPR.cpp SpeedPPR.h
+    FeatureOp.cpp FeatureOp.h SpeedPPR.cpp SpeedPPR.h
     SFMT/SFMT.c SFMT/SFMT.h SFMT/SFMT-sse2.h)
 target_compile_definitions(featpush PRIVATE SFMT_MEXP=19937)

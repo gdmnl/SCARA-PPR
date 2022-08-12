@@ -3,7 +3,7 @@
 #ifndef SPEEDPPR_HELPERFUNCTIONS_H
 #define SPEEDPPR_HELPERFUNCTIONS_H
 
-#define MSG(...)  { std::cout << #__VA_ARGS__ << ":" << (__VA_ARGS__) << std::endl; }
+#define MSG(...)  { std::cout << #__VA_ARGS__ << ": " << (__VA_ARGS__) << std::endl; }
 
 
 #include <string>
@@ -35,46 +35,6 @@ inline long get_proc_memory(){
 }
 
 // ==================== Argument parsing
-inline uint32_t parse_integer(const std::string &_str, size_t &_end) {
-    uint32_t rtn = 0;
-    for (_end = 0; !isdigit(_str[_end]);) { ++_end; }
-    for (; isdigit(_str[_end]); ++_end) {
-        rtn *= 10;
-        rtn += _str[_end] - '0';
-    }
-    return rtn;
-}
-
-inline uint32_t parse_integer(const std::string &_str, const size_t &_start, size_t &_end) {
-    uint32_t rtn = 0;
-    for (_end = _start; !isdigit(_str[_end]);) { ++_end; }
-    for (; isdigit(_str[_end]); ++_end) {
-        rtn *= 10;
-        rtn += _str[_end] - '0';
-    }
-    return rtn;
-}
-
-inline double parse_double(const std::string &_str, const size_t &_start, size_t &_end) {
-    size_t rtn = 0, scale = 1;
-    for (_end = _start; isspace(_str[_end]); ++_end);
-    if (!isdigit(_str[_end])) { printf("Error in parsing double.\n"); }
-    for (; isdigit(_str[_end]); ++_end) {
-        rtn *= 10;
-        rtn += _str[_end] - '0';
-    }
-    for (; isspace(_str[_end]);  ++_end);
-    if (_str[_end++] != '.') {
-        printf("Error in parsing double. Expecting Dot. \n");
-        exit(1);
-    }
-    for (; isdigit(_str[_end]); ++_end, scale *= 10) {
-        rtn *= 10;
-        rtn += _str[_end] - '0';
-    }
-    return rtn / (double) scale;
-}
-
 struct Param {
     std::string graph_file;
     std::string query_file;
