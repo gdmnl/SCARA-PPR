@@ -57,11 +57,11 @@ extern Param param;
 extern Param parseArgs(int nargs, char **args);
 
 // ==================== IO
-template<class T>
-inline T vector_L1(std::vector<T> Vec){
-    T sum = 0;
-    for(auto a : Vec)
-        sum += abs(a);
+template<class FLOAT_TYPE>
+inline FLOAT_TYPE vector_L1(std::vector<FLOAT_TYPE> Vec){
+    FLOAT_TYPE sum = 0;
+    for(FLOAT_TYPE a : Vec)
+        sum += fabs(a);
     return sum;
 }
 

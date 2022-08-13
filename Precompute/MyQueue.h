@@ -138,6 +138,7 @@ public:
 
     inline void set_row(const VertexIdType &row, const std::vector<PageRankScoreType> &_data) {
         data[row] = _data;
+        data[row].resize(ncol);
     }
 };
 

@@ -7,4 +7,5 @@ mkdir -p ${SAVEDIR}
 ../Precompute/build/featpush -algo ${ALGOSTR} \
         -data_folder ${DATADIR} -estimation_folder ${SAVEDIR} \
         -graph adj.txt -query query.txt -feats feats_norm.npy \
-        -split_num 10 -seed ${SEED} -alpha 0.2 -epsilon 16 > ${SAVEDIR}/out_${SEED}.txt
+        -alpha 0.2 -epsilon 16 -split_num 1 -thread_num $1 \
+        -seed ${SEED} > ${SAVEDIR}/out_${SEED}.txt

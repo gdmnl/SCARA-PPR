@@ -77,7 +77,7 @@ public:
 
         // Save embedding vector of feature i on all nodes to out_matrix
         time_start = getCurrentTime();
-        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end(),
+        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
                          out_matrix.begin() + idxf*V_num);
         time_write[tid] += getCurrentTime() - time_start;
     }
@@ -248,8 +248,8 @@ public:
             }
         }
         // Save embedding vector of feature i on all nodes to out_matrix
-        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end(),
-                            out_matrix.begin() + idxf*V_num);
+        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
+                         out_matrix.begin() + idxf*V_num);
         time_write[tid] += getCurrentTime() - time_start;
     }
 
