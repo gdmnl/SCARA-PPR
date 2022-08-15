@@ -33,7 +33,7 @@ public:
     std::vector<double> time_write;
     std::vector<double> time_push;
 
-    std::vector<PageRankScoreType> out_matrix;
+    My2DVector out_matrix;
 
 public:
 
@@ -49,7 +49,7 @@ public:
         Vt_num = load_query(Vt_nodes, param.query_file);
         feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
         spt_size = (feat_size + param.split_num - 1) / param.split_num;
-        out_matrix.resize(spt_size * V_num);   // spt_size rows, V_num columns
+        out_matrix.allocate(spt_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
         graph.reset_set_dummy_neighbor();
         graph.fill_dead_end_neighbor_with_id();
@@ -66,7 +66,6 @@ public:
             std::vector<PageRankScoreType> &_seed) {
         // printf("ID: %4" IDFMT "\n", i);
         double time_start = getCurrentTime();
-        VertexIdType idxf = i % spt_size;     // index of feature in split
         propagate_vector(feature_matrix[i], _seed, Vt_nodes, V_num, true);
         time_read[tid] += getCurrentTime() - time_start;
 
@@ -78,7 +77,7 @@ public:
         // Save embedding vector of feature i on all nodes to out_matrix
         time_start = getCurrentTime();
         std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-                         out_matrix.begin() + idxf*V_num);
+                         out_matrix[i%spt_size].begin());
         time_write[tid] += getCurrentTime() - time_start;
     }
 
@@ -100,7 +99,7 @@ public:
             } else {
                 res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
             }
-            output_feature(out_matrix, res_file.str(), feat_right - feat_left, V_num);
+            output_feature(out_matrix.get_data(), res_file.str(), feat_right - feat_left, V_num);
         }
     }
 
@@ -207,20 +206,17 @@ public:
     void push_one_rest(const VertexIdType i, const VertexIdType tid,
             SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
             std::vector<PageRankScoreType> &_seed, std::vector<PageRankScoreType> &_raw_seed) {
-        VertexIdType idxf = i % spt_size;   // index of feature in split
-        bool is_base = false;
         for (VertexIdType idx = 0; idx < base_size; idx++) {
             if (base_nodes[idx] == i) {
                 // printf("ID: %4" IDFMT "  is base\n", i);
-                is_base = true;
                 double time_start = getCurrentTime();
-                std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix.begin() + idxf*V_num);
+                std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix[i%spt_size].begin());
                 time_write[tid] += getCurrentTime() - time_start;
-                break;
+                return;
             }
         }
-        if (is_base) return;
 
+        double time_start = getCurrentTime();
         _raw_seed.swap(feature_matrix[i]);
         std::vector<PageRankScoreType> base_weight = reuse_weight(_raw_seed, base_matrix);
         PageRankScoreType theta_sum = vector_L1(base_weight);
@@ -230,8 +226,9 @@ public:
         // Ignore less relevant features
         // if (theta_sum < 1.6) return;
         re_feat_num++;
+        time_reuse[tid] += getCurrentTime() - time_start;
 
-        double time_start = getCurrentTime();
+        time_start = getCurrentTime();
         propagate_vector(_raw_seed, _seed, Vt_nodes, V_num, true);
         time_read[tid] += getCurrentTime() - time_start;
 
@@ -249,7 +246,7 @@ public:
         }
         // Save embedding vector of feature i on all nodes to out_matrix
         std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-                         out_matrix.begin() + idxf*V_num);
+                         out_matrix[i%spt_size].begin());
         time_write[tid] += getCurrentTime() - time_start;
     }
 

@@ -65,6 +65,11 @@ inline FLOAT_TYPE vector_L1(std::vector<FLOAT_TYPE> Vec){
     return sum;
 }
 
+/*
+Assign vector value from _data to _target:
+    If _data.size == _target.size: allow swap() for fast assign if _data no longer used
+    If _data.size <  _target.size: assign value according to _mapping, other values are set to 0
+*/
 template<class FLOAT_TYPE>
 inline void propagate_vector(std::vector<FLOAT_TYPE> &_data, std::vector<FLOAT_TYPE> &_target,
     const std::vector<VertexIdType> &_mapping, const VertexIdType &target_size, bool swap = false) {
@@ -119,7 +124,7 @@ inline void output_vector(std::vector<T> Vec, std::string filename){
 }
 
 inline void
-output_feature(std::vector<float> &out_matrix, const std::string &_out_path,
+output_feature(const std::vector<float> &out_matrix, const std::string &_out_path,
                const unsigned long spt_size, const VertexIdType &_node_num) {
     // Save to .npy file
     std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};

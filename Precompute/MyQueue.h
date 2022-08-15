@@ -71,16 +71,17 @@ struct FwdPushStructure {
 };
 
 
+/*
+Matrix in vector of vectors allow for fast row assign. Directly assign by std::vector.swap is 2x faster
+*/
 class MyMatrix {
 private:
-    // Use vector of vector instead of single vector, so directly assign vector
-    // value by std::vector.swap can be 2x faster
     std::vector<std::vector<PageRankScoreType>> data;
     VertexIdType nrow = 0;
     VertexIdType ncol = 0;
 
 public:
-    explicit MyMatrix() {};
+    explicit MyMatrix() {}
 
     explicit MyMatrix(const VertexIdType &_nrows, const VertexIdType &_ncols) :
         data(_nrows, std::vector<PageRankScoreType>(_ncols)),
@@ -105,7 +106,7 @@ public:
         return data[row];
     }
 
-    inline const VertexIdType &size() const { return nrow; }
+    inline const VertexIdType size() const { return nrow; }
 
     inline const VertexIdType nrows() const { return nrow; }
 
@@ -142,5 +143,73 @@ public:
     }
 };
 
+
+/*
+Matrix in 1D vector.
+*/
+class My2DVector {
+private:
+    std::vector<PageRankScoreType> data;
+    VertexIdType nrow = 0;
+    VertexIdType ncol = 0;
+
+    friend class My2DVectorRow;
+
+    class My2DVectorRow {
+    private:
+        My2DVector &parent;
+        VertexIdType row;
+    public:
+        My2DVectorRow(My2DVector &_parent, const VertexIdType &_row) :
+            parent(_parent), row(_row) {}
+
+        PageRankScoreType &operator[] (const VertexIdType &col) {
+            return parent.data[row * parent.ncol + col];
+        }
+
+        const PageRankScoreType &operator[] (const VertexIdType &col) const {
+            return parent.data[row * parent.ncol + col];
+        }
+
+        std::vector<PageRankScoreType>::iterator begin() {
+            return parent.data.begin() + row * parent.ncol;
+        }
+    };
+
+public:
+    explicit My2DVector() {}
+
+    explicit My2DVector(const VertexIdType &_nrows, const VertexIdType &_ncols) :
+        data(_nrows * _ncols),
+        nrow(_nrows),
+        ncol(_ncols) {
+        // std::cout << "Init 2DVector of: " << nrow << " " << ncol << std::endl;
+    }
+
+    void allocate(const VertexIdType &_nrows, const VertexIdType &_ncols) {
+        data.resize(_nrows * _ncols);
+        nrow = _nrows;
+        ncol = _ncols;
+        // std::cout << "Allocate 2DVector of: " << nrow << " " << ncol << std::endl;
+    }
+
+    My2DVectorRow operator[] (const VertexIdType &row) {
+        return My2DVectorRow(*this, row);
+    }
+
+    inline const VertexIdType size() const { return nrow * ncol; }
+
+    inline const VertexIdType nrows() const { return nrow; }
+
+    inline const VertexIdType ncols() const { return ncol; }
+
+    inline std::vector<PageRankScoreType>& get_data() { return data; }
+
+    inline const std::vector<PageRankScoreType>& get_data() const { return data; }
+
+    inline bool empty() const {
+        return data.empty();
+    }
+};
 
 #endif //SPEEDPPR_MYQUEUE_H
