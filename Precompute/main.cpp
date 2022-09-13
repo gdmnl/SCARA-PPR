@@ -17,6 +17,13 @@ int main(int argc, char **argv) {
         cleaner.clean_graph(param.graph_file, param.data_folder);
     }
     graph.read_binary(param.data_folder + "/attribute.txt", param.data_folder + "/graph.bin");
+    if (param.index) {
+        graph.set_dummy_neighbor(graph.get_dummy_id());
+        WalkCache walkCache(graph);
+        walkCache.generate();
+        walkCache.save(param.data_folder + "/index.bin");
+        graph.reset_set_dummy_neighbor();
+    }
 
     if (param.algorithm == "featpush"){
         Base base(graph, param);

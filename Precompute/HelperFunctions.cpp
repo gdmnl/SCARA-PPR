@@ -102,6 +102,17 @@ Param parseArgs(int nargs, char **args) {
             if (!rtn.data_folder.empty())
                 rtn.feature_file = rtn.data_folder + "/" + rtn.feature_file;
             printf("Feature File: %s\n", rtn.feature_file.c_str());
+        } else if (para == "index") {
+            auto option = getNextWord(arg);
+            if (option == "yes") {
+                rtn.index = true;
+            } else if (option == "no") {
+                rtn.index = false;
+            } else {
+                printf("Unknown option -%s!\n", option.c_str());
+                exit(0);
+            }
+            std::cout << "With Index: " << rtn.index << "\n";
         } else if (para == "seed") {
             rtn.seed = std::stoi(getNextWord(arg));
             printf("Random Seed: %d\n", rtn.seed);

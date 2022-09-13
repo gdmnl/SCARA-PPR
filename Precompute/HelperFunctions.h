@@ -49,6 +49,7 @@ struct Param {
     float alpha = 0.2;
     float gamma = 0.2;
     float base_ratio = 0.04;
+    bool index = false;
     bool output_estimations = false;
 };
 

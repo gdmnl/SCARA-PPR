@@ -53,6 +53,7 @@ public:
         printf("Result size: %ld \n", out_matrix.size());
         graph.reset_set_dummy_neighbor();
         graph.fill_dead_end_neighbor_with_id();
+        if (param.index) walkCache.load(param.data_folder + "/index.bin");
 
         thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
         thd_size = (spt_size + thread_num - 1) / thread_num;
@@ -70,8 +71,10 @@ public:
         time_read[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        ppr.compute_approximate_page_rank_3(_graph_structure, _seed, epsilon, alpha,
-                                            lower_threshold, walkCache);
+        if (param.index)
+            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache);
+        else
+            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
         time_push[tid] += getCurrentTime() - time_start;
 
         // Save embedding vector of feature i on all nodes to out_matrix
@@ -185,8 +188,10 @@ public:
         time_read[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        ppr.compute_approximate_page_rank_3(_graph_structure, _seed, epsilon, alpha,
-                                            lower_threshold, walkCache, param.gamma);
+        if (param.index)
+            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, param.gamma);
+        else
+            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
@@ -233,8 +238,10 @@ public:
         time_read[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        ppr.compute_approximate_page_rank_3(_graph_structure, _seed, epsilon, alpha,
-                                            lower_threshold, walkCache, 2 - theta_sum * param.gamma);
+        if (param.index)
+            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
+        else
+            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();

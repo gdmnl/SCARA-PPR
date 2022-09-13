@@ -1,9 +1,32 @@
 # SCARA-PPR
 This is the original code for *SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization*
 
+[Paper](https://www.vldb.org/pvldb/vol15/p3240-liao.pdf) |
 [GitHub](https://github.com/gdmnl/SCARA-PPR) |
-[Tech Report](https://sites.google.com/view/scara-techreport)
-<!-- TODO: paper & arxiv link -->
+[Tech Report](https://sites.google.com/view/scara-techreport) |
+[arXiv](https://arxiv.org/abs/2207.09179)
+
+## Citing
+
+If you find this work useful, please cite our paper:
+>  Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
+>
+>  SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.
+>
+>  PVLDB, 15(11): 3240-3248, 2022. doi:10.14778/3551793.3551866.
+```
+@article{liao2022scara,
+  title={SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization},
+  author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
+  journal={Proceedings of the VLDB Endowment},
+  volume={15},
+  number={11},
+  pages={3240-3248},
+  year={2022},
+  publisher={VLDB Endowment},
+  url = {https://doi.org/10.14778/3551793.3551866},
+}
+```
 
 ## Usage
 **We provide a complete example and its log in the [demo notebook](demo.ipynb). The sample PubMed dataset is available in the [data folder](data/pubmed/).**
@@ -47,24 +70,3 @@ This is the original code for *SCARA: Scalable Graph Neural Networks with Featur
 * Products & Papers100M: [OGB](https://github.com/snap-stanford/ogb)
 * Amazon: [Cluster-GCN](http://manikvarma.org/downloads/XC/XMLRepository.html)
 * MAG: [PANE](https://renchi.ac.cn/datasets/)
-
-## Citing
-
-If you find this work useful, please cite our paper:
-```
-Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
-SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.
-PVLDB, 15(11): 3240-3248, 2022.
-```
-```
-@article{liao2022scara,
-  title={SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization},
-  author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
-  journal={Proceedings of the VLDB Endowment},
-  volume={15},
-  number={11},
-  pages={3240-3248},
-  year={2022},
-  publisher={VLDB Endowment}
-}
-```

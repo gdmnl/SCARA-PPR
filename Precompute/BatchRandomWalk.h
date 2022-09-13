@@ -69,35 +69,21 @@ private:
     const Graph &graph;
     std::vector<VertexIdType> walks;
     std::vector<VertexIdType> start_indices;
-public:
-    static const uint32_t num_zero_walks;
 
 public:
 
     explicit WalkCache(const Graph &_graph) :
             graph(_graph),
-            walks(_graph.getNumOfVertices() * num_zero_walks
-                  + _graph.getNumOfEdges() + _graph.get_num_dead_end(), 0),
+            walks(_graph.getNumOfEdges() + _graph.get_num_dead_end(), 0),
             start_indices(_graph.getNumOfVertices(), 0) {
     }
 
     void generate() {
+        double time_start = getCurrentTime();
         const VertexIdType num_vertices = graph.getNumOfVertices();
         for (VertexIdType sid = 0, index = 0; sid < num_vertices; ++sid) {
             // if (sid % 500000 == 0) { std::cout << sid << " vertices processed.\n"; }
             start_indices[sid] = index;
-            for (uint32_t j = 0; j < num_zero_walks; ++j) {
-                VertexIdType current_id = sid;
-                while (SFMT64::bias_coin_is_tail(graph.get_alpha())) {
-                    const VertexIdType &idx_start = graph.get_neighbor_list_start_pos(current_id);
-                    const VertexIdType &idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
-                    const VertexIdType degree = idx_end - idx_start;
-                    const VertexIdType shift = SFMT64::uniform_int(degree);
-                    const VertexIdType nid = graph.getOutNeighbor(idx_start + shift);
-                    current_id = nid;
-                }
-                walks[index++] = current_id;
-            }
             const VertexIdType &sid_idx_start = graph.get_neighbor_list_start_pos(sid);
             const VertexIdType &sid_idx_end = graph.get_neighbor_list_start_pos(sid + 1);
             const VertexIdType sid_degree = sid_idx_end - sid_idx_start;
@@ -116,6 +102,7 @@ public:
                 walks[index++] = current_id;
             }
         }
+        printf("Walk Cache Time: %.6f\n", getCurrentTime() - time_start);
     }
 
     void save(const std::string &_filename) const {
@@ -127,36 +114,33 @@ public:
             printf("WalkCache::save; File Not Exists.\n");
         }
         const auto end = getCurrentTime();
-        printf("Time Used For Saving : %.2f\n", end - start);
+        // printf("Time Used For Saving : %.2f\n", end - start);
     }
 
     void load(const std::string &_filename) {
         const auto start = getCurrentTime();
         walks.clear();
         //TODO check here
-        walks.resize(graph.getNumOfVertices() * num_zero_walks
-                     + graph.getNumOfEdges() + graph.get_num_dead_end(), 0);
-        assert(walks.size() ==
-               graph.getNumOfVertices() * num_zero_walks + graph.get_neighbor_list_start_pos(graph.getNumOfVertices()));
+        walks.resize(graph.getNumOfEdges() + graph.get_num_dead_end(), 0);
+        assert(walks.size() == graph.get_neighbor_list_start_pos(graph.getNumOfVertices()));
         if (std::FILE *f = std::fopen(_filename.c_str(), "rb")) {
             MSG(walks.size())
             size_t rtn = std::fread(walks.data(), sizeof walks[0], walks.size(), f);
-            printf("Returned Value of fread: %zu\n", rtn);
+            // printf("Returned Value of fread: %zu\n", rtn);
             std::fclose(f);
             start_indices.clear();
             start_indices.resize(graph.getNumOfVertices(), 0);
             for (VertexIdType prev_id = 0, id = 1; id < graph.getNumOfVertices(); ++prev_id, ++id) {
                 start_indices[id] =
                         start_indices[prev_id]
-                        + std::max((VertexIdType) 1u, graph.original_out_degree(prev_id))
-                        + num_zero_walks;
+                        + std::max((VertexIdType) 1u, graph.original_out_degree(prev_id));
             }
         } else {
             printf("WalkCache::load; File Not Exists.\n");
             exit(1);
         }
         const auto end = getCurrentTime();
-        printf("Time Used For Loading Cache : %.2f\n", end - start);
+        // printf("Time Used For Loading Cache : %.2f\n", end - start);
     }
 
     void show() {
@@ -170,7 +154,7 @@ public:
 
     inline VertexIdType get_one_hop_start_index(const VertexIdType &_vid) const {
         assert(_vid < graph.getNumOfVertices());
-        return start_indices[_vid] + num_zero_walks;
+        return start_indices[_vid];
     }
 
     inline const VertexIdType &get_walk(const VertexIdType &_index) const {
