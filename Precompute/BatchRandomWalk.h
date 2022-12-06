@@ -1,7 +1,5 @@
-
-
-#ifndef SPEEDPPR_BATCHRANDOMWALK_H
-#define SPEEDPPR_BATCHRANDOMWALK_H
+#ifndef SCARA_BATCHRANDOMWALK_H
+#define SCARA_BATCHRANDOMWALK_H
 
 
 #include <vector>
@@ -11,7 +9,7 @@
 #include <queue>
 #include "BasicDefinition.h"
 #include "Graph.h"
-#include "MyQueue.h"
+#include "MyType.h"
 #include "MyRandom.h"
 
 template<class FLOAT_TYPE>
@@ -52,13 +50,9 @@ public:
         }
     }
 
-
     inline VertexIdType generate_random_id() const {
         const unsigned int bucket_id = MinimalStandardGenerator::uniform_int(size);
-//        const unsigned int bucket_id = MyRandom::rand_int(0, size - 1);
-        // First or second
-        return MinimalStandardGenerator::bias_coin_is_head(probability[bucket_id]) ? first[bucket_id]
-                                                                                   : second[bucket_id];
+        return MinimalStandardGenerator::bias_coin_is_head(probability[bucket_id]) ? first[bucket_id] : second[bucket_id];
     }
 
 };
@@ -91,7 +85,7 @@ public:
                 const VertexIdType sid_shift = SFMT64::uniform_int(sid_degree);
                 VertexIdType current_id = graph.getOutNeighbor(sid_idx_start + sid_shift);
                 while (SFMT64::bias_coin_is_tail(graph.get_alpha())) {
-                    // continues to walk
+                    // TODO: stop at L-hop
                     const VertexIdType &idx_start = graph.get_neighbor_list_start_pos(current_id);
                     const VertexIdType &idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
                     const VertexIdType degree = idx_end - idx_start;
@@ -120,7 +114,6 @@ public:
     void load(const std::string &_filename) {
         const auto start = getCurrentTime();
         walks.clear();
-        //TODO check here
         walks.resize(graph.getNumOfEdges() + graph.get_num_dead_end(), 0);
         assert(walks.size() == graph.get_neighbor_list_start_pos(graph.getNumOfVertices()));
         if (std::FILE *f = std::fopen(_filename.c_str(), "rb")) {
@@ -163,4 +156,4 @@ public:
     }
 };
 
-#endif //SPEEDPPR_BATCHRANDOMWALK_H
+#endif //SCARA_BATCHRANDOMWALK_H

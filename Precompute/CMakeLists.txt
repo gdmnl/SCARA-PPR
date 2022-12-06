@@ -13,7 +13,7 @@ INCLUDE_DIRECTORIES(${SFMT_INCLUDE_DIR})
 add_executable(featpush main.cpp
     Graph.h BasicDefinition.h BatchRandomWalk.h
     HelperFunctions.h HelperFunctions.cpp npy.hpp
-    MyQueue.h MyRandom.cpp MyRandom.h
+    MyType.h MyRandom.cpp MyRandom.h
     FeatureOp.cpp FeatureOp.h SpeedPPR.h
     SFMT/SFMT.c SFMT/SFMT.h SFMT/SFMT-sse2.h)
 target_compile_definitions(featpush PRIVATE SFMT_MEXP=19937)

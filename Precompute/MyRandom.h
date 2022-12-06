@@ -1,7 +1,5 @@
-
-
-#ifndef SPEEDPPR_MYRANDOM_H
-#define SPEEDPPR_MYRANDOM_H
+#ifndef SCARA_MYRANDOM_H
+#define SCARA_MYRANDOM_H
 
 
 #include <random>
@@ -122,4 +120,4 @@ public:
 };
 
 
-#endif //SPEEDPPR_MYRANDOM_H
+#endif //SCARA_MYRANDOM_H

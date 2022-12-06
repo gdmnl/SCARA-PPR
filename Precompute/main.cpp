@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
         cleaner.clean_graph(param.graph_file, param.data_folder);
     }
     graph.read_binary(param.data_folder + "/attribute.txt", param.data_folder + "/graph.bin");
+    // Perform cached random walk
     if (param.index) {
         graph.set_dummy_neighbor(graph.get_dummy_id());
         WalkCache walkCache(graph);
@@ -25,6 +26,7 @@ int main(int argc, char **argv) {
         graph.reset_set_dummy_neighbor();
     }
 
+    // Perfrom feature operations
     if (param.algorithm == "featpush"){
         Base base(graph, param);
         base.push();

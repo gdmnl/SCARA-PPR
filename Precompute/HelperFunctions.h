@@ -1,7 +1,5 @@
-
-
-#ifndef SPEEDPPR_HELPERFUNCTIONS_H
-#define SPEEDPPR_HELPERFUNCTIONS_H
+#ifndef SCARA_HELPERFUNCTIONS_H
+#define SCARA_HELPERFUNCTIONS_H
 
 #define MSG(...)  { std::cout << #__VA_ARGS__ << ": " << (__VA_ARGS__) << std::endl; }
 
@@ -18,7 +16,7 @@
 #include <unistd.h>
 #include <sstream>
 #include "BasicDefinition.h"
-#include "MyQueue.h"
+#include "MyType.h"
 #include "npy.hpp"
 #ifdef __linux__
     #include <sys/resource.h>
@@ -191,4 +189,4 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, MyMatrix &feature_matrix,
     return feature_matrix.size();
 }
 
-#endif //SPEEDPPR_HELPERFUNCTIONS_H
+#endif //SCARA_HELPERFUNCTIONS_H

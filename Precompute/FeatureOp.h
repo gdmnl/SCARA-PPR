@@ -1,12 +1,11 @@
-
-#ifndef SPEEDPPR_FEATURE_H
-#define SPEEDPPR_FEATURE_H
+#ifndef SCARA_FEATUREOP_H
+#define SCARA_FEATUREOP_H
 
 #include <vector>
 #include <iostream>
 #include <cmath>
 #include "BasicDefinition.h"
-#include "MyQueue.h"
+#include "MyType.h"
 
 // ==================== Vector measurement
 template <class FLOAT_TYPE>
@@ -171,4 +170,4 @@ reuse_weight(std::vector<FLOAT_TYPE> &raw_seed, MyMatrix &base_matrix) {
     return base_weight;
 }
 
-#endif  // SPEEDPPR_FEATURE_H
+#endif  // SCARA_FEATUREOP_H

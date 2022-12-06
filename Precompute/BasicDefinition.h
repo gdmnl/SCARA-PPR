@@ -1,7 +1,5 @@
-
-
-#ifndef SPEEDPPR_BASICDEFINITION_H
-#define SPEEDPPR_BASICDEFINITION_H
+#ifndef SCARA_BASICDEFINITION_H
+#define SCARA_BASICDEFINITION_H
 
 #include <queue>
 
@@ -52,4 +50,4 @@ struct Edge {
     }
 };
 
-#endif //SPEEDPPR_BASICDEFINITION_H
+#endif //SCARA_BASICDEFINITION_H

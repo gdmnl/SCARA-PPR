@@ -1,5 +1,5 @@
-#ifndef SPEEDPPR_GRAPH_H
-#define SPEEDPPR_GRAPH_H
+#ifndef SCARA_GRAPH_H
+#define SCARA_GRAPH_H
 
 #include <string>
 #include <vector>
@@ -479,4 +479,4 @@ public:
 };
 
 
-#endif //SPEEDPPR_GRAPH_H
+#endif //SCARA_GRAPH_H

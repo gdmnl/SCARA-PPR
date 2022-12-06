@@ -1,10 +1,6 @@
 // Ref: https://github.com/wuhao-wu-jiang/Personalized-PageRank
-// article{WGWZ21,
-//     title={Unifying the Global and Local Approaches: An Efficient Power Iteration with Forward Push},
-//     author={Wu, Hao and Gan, Junhao and Wei, Zhewei and Zhang, Rui},
-//     journal={arXiv preprint arXiv:2101.03652}}
-#ifndef SPEEDPPR_SPEEDPPR_H
-#define SPEEDPPR_SPEEDPPR_H
+#ifndef SCARA_SPEEDPPR_H
+#define SCARA_SPEEDPPR_H
 
 #include <cmath>
 #include <vector>
@@ -16,7 +12,7 @@
 #include <sstream>
 #include "BasicDefinition.h"
 #include "Graph.h"
-#include "MyQueue.h"
+#include "MyType.h"
 #include "BatchRandomWalk.h"
 
 
@@ -226,6 +222,7 @@ public:
             }
         }
 
+        // random walks
         means.swap(pi);
         for (VertexIdType id = 0; id < numOfVertices; ++id) {
             FLOAT_TYPE &residual = residuals[id];
@@ -411,6 +408,7 @@ public:
 
         for (uint32_t j = 0; j < current_vertices.size(); ++j) {
             VertexIdType current_id = current_vertices[j];
+            // TODO: stop at L-hop
             if (MinimalStandardGenerator::bias_coin_is_head(_alpha)) {
                 means[current_id] += one_over_time_scaling_factor;
             } else {
@@ -434,4 +432,4 @@ public:
     }
 };
 
-#endif //SPEEDPPR_SPEEDPPR_H
+#endif //SCARA_SPEEDPPR_H
