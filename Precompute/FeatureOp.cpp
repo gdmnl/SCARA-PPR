@@ -51,9 +51,16 @@ public:
         spt_size = (feat_size + param.split_num - 1) / param.split_num;
         out_matrix.allocate(spt_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
+        // Perform cached random walk
+        if (param.index) {
+            graph.set_dummy_neighbor(graph.get_dummy_id());
+            walkCache.generate();
+            // walkCache.save(param.data_folder + "/index.bin");
+            // walkCache.load(param.data_folder + "/index.bin");
+            graph.reset_set_dummy_neighbor();
+        }
         graph.reset_set_dummy_neighbor();
         graph.fill_dead_end_neighbor_with_id();
-        if (param.index) walkCache.load(param.data_folder + "/index.bin");
 
         thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
         thd_size = (spt_size + thread_num - 1) / thread_num;

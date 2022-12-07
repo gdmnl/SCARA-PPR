@@ -5,12 +5,42 @@
 #include <vector>
 #include <numeric>
 #include <stack>
-#include <random>
 #include <queue>
 #include "BasicDefinition.h"
 #include "Graph.h"
 #include "MyType.h"
-#include "MyRandom.h"
+#include "fastPRNG.h"
+
+
+class XoshiroGenerator {
+private:
+    fastPRNG::fastXS64 generator;
+public:
+    void initialize(uint64_t seed) {
+       generator.seed(seed);
+    }
+
+    inline double uniform_real() {
+        return generator.xorShift_UNI<double>();
+    }
+
+    inline uint32_t uniform_int(const uint32_t &_end) {
+        return generator.xorShift() % _end;
+    }
+
+    inline bool bias_coin_is_head(const double &_prob) {
+        return generator.xorShift_UNI<double>() <= _prob;
+    }
+
+    inline bool bias_coin_is_tail(const double &_prob) {
+        return generator.xorShift_UNI<double>() > _prob;
+    }
+};
+
+extern XoshiroGenerator fRNG;
+
+extern XoshiroGenerator init_rng(uint64_t seed);
+
 
 template<class FLOAT_TYPE>
 class Alias {
@@ -51,8 +81,8 @@ public:
     }
 
     inline VertexIdType generate_random_id() const {
-        const unsigned int bucket_id = MinimalStandardGenerator::uniform_int(size);
-        return MinimalStandardGenerator::bias_coin_is_head(probability[bucket_id]) ? first[bucket_id] : second[bucket_id];
+        const unsigned int bucket_id = fRNG.uniform_int(size);
+        return fRNG.bias_coin_is_head(probability[bucket_id]) ? first[bucket_id] : second[bucket_id];
     }
 
 };
@@ -82,14 +112,14 @@ public:
             const VertexIdType &sid_idx_end = graph.get_neighbor_list_start_pos(sid + 1);
             const VertexIdType sid_degree = sid_idx_end - sid_idx_start;
             for (uint32_t j = 0; j < sid_degree; ++j) {
-                const VertexIdType sid_shift = SFMT64::uniform_int(sid_degree);
+                const VertexIdType sid_shift = fRNG.uniform_int(sid_degree);
                 VertexIdType current_id = graph.getOutNeighbor(sid_idx_start + sid_shift);
-                while (SFMT64::bias_coin_is_tail(graph.get_alpha())) {
+                while (fRNG.bias_coin_is_tail(graph.get_alpha())) {
                     // TODO: stop at L-hop
                     const VertexIdType &idx_start = graph.get_neighbor_list_start_pos(current_id);
                     const VertexIdType &idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
                     const VertexIdType degree = idx_end - idx_start;
-                    const VertexIdType shift = SFMT64::uniform_int(degree);
+                    const VertexIdType shift = fRNG.uniform_int(degree);
                     const VertexIdType nid = graph.getOutNeighbor(idx_start + shift);
                     current_id = nid;
                 }

@@ -81,18 +81,18 @@ public:
             const VertexIdType &idx_end = graph.get_neighbor_list_start_pos(id + 1);
             const VertexIdType degree = idx_end - idx_start;
             // Generate a uniform shift from 0 to degree - 1
-            const VertexIdType shift = MinimalStandardGenerator::uniform_int(degree);
+            const VertexIdType shift = fRNG.uniform_int(degree);
             id = graph.getOutNeighbor(idx_start + shift);
         }
         for (uint32_t j = 0; j < current_vertices.size(); ++j) {
             VertexIdType current_id = current_vertices[j];
-            if (MinimalStandardGenerator::bias_coin_is_head(param.alpha)) {
+            if (fRNG.bias_coin_is_head(param.alpha)) {
                 means[current_id] += 1;
             } else {
                 const VertexIdType &current_idx_start = graph.get_neighbor_list_start_pos(current_id);
                 const VertexIdType &current_idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
                 const VertexIdType current_degree = current_idx_end - current_idx_start;
-                const VertexIdType current_shift = MinimalStandardGenerator::uniform_int(current_degree);
+                const VertexIdType current_shift = fRNG.uniform_int(current_degree);
                 current_id = graph.getOutNeighbor(current_idx_start + current_shift);
                 current_vertices.push_back(current_id);
             }
@@ -402,20 +402,20 @@ public:
             const VertexIdType &idx_end = graph.get_neighbor_list_start_pos(id + 1);
             const VertexIdType degree = idx_end - idx_start;
             // Generate a uniform shift from 0 to degree - 1
-            const VertexIdType shift = MinimalStandardGenerator::uniform_int(degree);
+            const VertexIdType shift = fRNG.uniform_int(degree);
             id = graph.getOutNeighbor(idx_start + shift);
         }
 
         for (uint32_t j = 0; j < current_vertices.size(); ++j) {
             VertexIdType current_id = current_vertices[j];
             // TODO: stop at L-hop
-            if (MinimalStandardGenerator::bias_coin_is_head(_alpha)) {
+            if (fRNG.bias_coin_is_head(_alpha)) {
                 means[current_id] += one_over_time_scaling_factor;
             } else {
                 const VertexIdType &current_idx_start = graph.get_neighbor_list_start_pos(current_id);
                 const VertexIdType &current_idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
                 const VertexIdType current_degree = current_idx_end - current_idx_start;
-                const VertexIdType current_shift = MinimalStandardGenerator::uniform_int(current_degree);
+                const VertexIdType current_shift = fRNG.uniform_int(current_degree);
                 current_id = graph.getOutNeighbor(current_idx_start + current_shift);
                 current_vertices.push_back(current_id);
             }

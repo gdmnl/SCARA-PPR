@@ -5,9 +5,18 @@
 #include "FeatureOp.cpp"
 #include <unistd.h>
 
+
+XoshiroGenerator fRNG;
+
+XoshiroGenerator init_rng(uint64_t seed) {
+    XoshiroGenerator rng;
+    rng.initialize(seed);
+    return rng;
+}
+
 int main(int argc, char **argv) {
     param = parseArgs(argc, argv);
-    SFMT64::initialize(param.seed);
+    fRNG = init_rng(param.seed);
     // Input graph
     Graph graph;
     graph.set_alpha(param.alpha);
@@ -17,14 +26,6 @@ int main(int argc, char **argv) {
         cleaner.clean_graph(param.graph_file, param.data_folder);
     }
     graph.read_binary(param.data_folder + "/attribute.txt", param.data_folder + "/graph.bin");
-    // Perform cached random walk
-    if (param.index) {
-        graph.set_dummy_neighbor(graph.get_dummy_id());
-        WalkCache walkCache(graph);
-        walkCache.generate();
-        walkCache.save(param.data_folder + "/index.bin");
-        graph.reset_set_dummy_neighbor();
-    }
 
     // Perfrom feature operations
     if (param.algorithm == "featpush"){

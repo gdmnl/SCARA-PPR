@@ -70,8 +70,8 @@ struct FwdPushStructure {
 
 
 /*
-Matrix in vector of vectors allow for fast row assign. Directly assign by std::vector.swap is 2x faster
-*/
+ * Matrix in vector of vectors allow for fast row assign. Directly assign by std::vector.swap is 2x faster
+ */
 class MyMatrix {
 private:
     std::vector<std::vector<PageRankScoreType>> data;
@@ -143,8 +143,8 @@ public:
 
 
 /*
-Matrix in 1D vector.
-*/
+ * Matrix in 1D vector.
+ */
 class My2DVector {
 private:
     std::vector<PageRankScoreType> data;
