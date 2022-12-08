@@ -1,9 +1,11 @@
 #include <thread>
 #include "Graph.h"
-#include "BatchRandomWalk.h"
 #include "SpeedPPR.h"
 #include "HelperFunctions.h"
 #include "FeatureOp.h"
+#ifdef ENABLE_RW
+#include "BatchRandomWalk.h"
+#endif
 
 // Wrapper class
 class Base {
@@ -12,9 +14,11 @@ protected:
     Param &param;
     Graph &graph;
     class SpeedPPR ppr;
-    WalkCache walkCache;
     std::vector<VertexIdType> Vt_nodes; // list of queried nodes
     MyMatrix feature_matrix;
+#ifdef ENABLE_RW
+    WalkCache walkCache;
+#endif
 
     VertexIdType thread_num;            // number of threads
     PageRankScoreType epsilon;
@@ -40,7 +44,9 @@ public:
     Base(Graph &_graph, Param &_param) :
             V_num(_graph.getNumOfVertices()),
             ppr(graph),
+#ifdef ENABLE_RW
             walkCache(graph),
+#endif
             epsilon(_param.epsilon),
             alpha(_param.alpha),
             lower_threshold(1.0 / _graph.getNumOfVertices()),
@@ -52,14 +58,14 @@ public:
         out_matrix.allocate(spt_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
         // Perform cached random walk
-        if (param.index) {
+#ifdef ENABLE_RW
+         if (param.index) {
             graph.set_dummy_neighbor(graph.get_dummy_id());
             walkCache.generate();
-            // walkCache.save(param.data_folder + "/index.bin");
-            // walkCache.load(param.data_folder + "/index.bin");
             graph.reset_set_dummy_neighbor();
         }
-        graph.fill_dead_end_neighbor_with_id();
+#endif
+         graph.fill_dead_end_neighbor_with_id();
 
         thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
         thd_size = (spt_size + thread_num - 1) / thread_num;
@@ -77,10 +83,14 @@ public:
         time_read[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
+#ifdef ENABLE_RW
         if (param.index)
             ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache);
         else
             ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
+#else
+        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
+#endif
         time_push[tid] += getCurrentTime() - time_start;
 
         // Save embedding vector of feature i on all nodes to out_matrix
@@ -194,10 +204,14 @@ public:
         time_read[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
+#ifdef ENABLE_RW
         if (param.index)
             ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, param.gamma);
         else
             ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
+#else
+        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
+#endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
@@ -244,10 +258,14 @@ public:
         time_read[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
+#ifdef ENABLE_RW
         if (param.index)
             ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
         else
             ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+#else
+        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+#endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();

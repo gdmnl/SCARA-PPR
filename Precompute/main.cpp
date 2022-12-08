@@ -1,10 +1,11 @@
+#include <unistd.h>
 #include "HelperFunctions.h"
 #include "Graph.h"
-#include "BatchRandomWalk.h"
 #include "SpeedPPR.h"
 #include "FeatureOp.cpp"
-#include <unistd.h>
 
+#ifdef ENABLE_RW
+#include "BatchRandomWalk.h"
 
 XoshiroGenerator fRNG;
 
@@ -13,10 +14,13 @@ XoshiroGenerator init_rng(uint64_t seed) {
     rng.initialize(seed);
     return rng;
 }
+#endif
 
 int main(int argc, char **argv) {
     param = parseArgs(argc, argv);
+#ifdef ENABLE_RW
     fRNG = init_rng(param.seed);
+#endif
     // Input graph
     Graph graph;
     graph.set_alpha(param.alpha);

@@ -1,6 +1,7 @@
 #ifndef SCARA_BATCHRANDOMWALK_H
 #define SCARA_BATCHRANDOMWALK_H
 
+#ifdef ENABLE_RW
 
 #include <vector>
 #include <numeric>
@@ -171,12 +172,12 @@ public:
     }
 
     inline const VertexIdType &get_zero_hop_start_index(const VertexIdType &_vid) const {
-        assert(_vid < graph.getNumOfVertices());
+        // assert(_vid < graph.getNumOfVertices());
         return start_indices[_vid];
     }
 
     inline VertexIdType get_one_hop_start_index(const VertexIdType &_vid) const {
-        assert(_vid < graph.getNumOfVertices());
+        // assert(_vid < graph.getNumOfVertices());
         return start_indices[_vid];
     }
 
@@ -186,4 +187,5 @@ public:
     }
 };
 
+#endif
 #endif //SCARA_BATCHRANDOMWALK_H

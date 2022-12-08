@@ -1,6 +1,10 @@
 #ifndef SCARA_BASICDEFINITION_H
 #define SCARA_BASICDEFINITION_H
 
+// #ifndef ENABLE_RW
+// #define ENABLE_RW
+// #endif
+
 #include <queue>
 
 typedef unsigned long VertexIdType;

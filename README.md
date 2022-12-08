@@ -29,7 +29,7 @@ If you find this work useful, please cite our paper:
 ```
 
 ## Usage
-**We provide a complete example and its log in the [demo notebook](demo.ipynb). The sample PubMed dataset is available in the [data folder](data_demo/pubmed/).**
+**We provide a complete example and its log in the [demo notebook](demo.ipynb). The sample PubMed dataset is available in the [data folder](data/pubmed/).**
 
 ### Data Preparation
 1. Download data (links [below](#dataset-link)) in GBP format to path `data/[dataset_name]`. Similar to the PubMed dataset example, there are three files:

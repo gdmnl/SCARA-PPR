@@ -13,8 +13,9 @@
 #include "BasicDefinition.h"
 #include "Graph.h"
 #include "MyType.h"
+#ifdef ENABLE_RW
 #include "BatchRandomWalk.h"
-
+#endif
 
 class SpeedPPR {
 
@@ -56,6 +57,7 @@ private:
 
 public:
 
+#ifdef ENABLE_RW
     void get_random_walk_speed() {
         // we need to call graph.reset_set_dummy_neighbor(); before return
         graph.set_dummy_neighbor(graph.get_dummy_id());
@@ -102,16 +104,20 @@ public:
         MSG(num_of_walks_per_second)
         graph.reset_set_dummy_neighbor();
     }
+#endif
 
     explicit SpeedPPR(Graph &_graph) :
             numOfVertices(_graph.getNumOfVertices()),
             d_log_numOfVertices(log(_graph.getNumOfVertices())),
             graph(_graph) {
+#ifdef ENABLE_RW
         get_random_walk_speed();
+#endif
     }
 
 public:
 
+#ifdef ENABLE_RW
     template<class FLOAT_TYPE>
     void calc_ppr_cache(
                 WHOLE_GRAPH_STRUCTURE<FLOAT_TYPE> &_whole_graph_structure,
@@ -163,6 +169,7 @@ public:
                     pi[id] += alpha_residual;
                     residuals[id] = 0;
                     const FLOAT_TYPE increment = one_minus_alpha_residual / degree_f;
+
                     for (uint32_t j = idx_start; j < idx_end; ++j) {
                         const VertexIdType &nid = graph.getOutNeighbor(j);
                         residuals[nid] += increment;
@@ -230,11 +237,11 @@ public:
                 const FLOAT_TYPE alpha_residual = _alpha * residuals[id];
                 means[id] += alpha_residual;
                 residuals[id] -= alpha_residual;
+
                 VertexIdType idx_one_hop = _walk_cache.get_one_hop_start_index(id);
                 const FLOAT_TYPE num_one_hop_walks = std::ceil(abs(residual));
                 const FLOAT_TYPE correction_factor = residual / num_one_hop_walks;
                 const uint32_t end_one_hop = idx_one_hop + num_one_hop_walks;
-
                 for (; idx_one_hop < end_one_hop; ++idx_one_hop) {
                     means[_walk_cache.get_walk(idx_one_hop)] += correction_factor;
                 }
@@ -251,6 +258,7 @@ public:
         }
         means[numOfVertices] = 0;
     }
+#endif
 
     template<class FLOAT_TYPE>
     void calc_ppr_walk(
@@ -271,7 +279,7 @@ public:
         auto &means = _whole_graph_structure.means;
 
         std::fill(pi.begin(), pi.end(), 0);
-        std::fill(residuals.begin(), residuals.end(), 0);
+        std::fill(residuals.begin(), residuals.end(), 0.0);
 
         for(int i = 0; i < graph.getNumOfVertices(); i++){
             if(_seeds[i] != 0.0){
@@ -288,7 +296,7 @@ public:
         const uint32_t step_size = std::max(powf(initial_size, 1.0 / 3.0), 2.0f);
 
         for (uint32_t scale_factor = initial_size;
-                scale_factor >= 1 && active_vertices.size() < queue_threshold;) {
+             scale_factor >= 1 && active_vertices.size() < queue_threshold;) {
             const FLOAT_TYPE scale_factor_over_one_minus_alpha = scale_factor / one_minus_alpha;
             while (!active_vertices.empty() && active_vertices.size() < queue_threshold) {
                 const VertexIdType id = active_vertices.front();
@@ -320,7 +328,7 @@ public:
 
             if (active_vertices.empty()) {
                 for (VertexIdType id = 0; id < numOfVertices; ++id) {
-                    if (one_minus_alpha * residuals[id] >= scale_factor) {
+                    if (abs(one_minus_alpha * residuals[id]) >= scale_factor) {
                         active_vertices.push(id);
                         is_active[id] = true;
                     }
@@ -366,8 +374,10 @@ public:
         }
 
         // random walks
-        uint32_t num_of_walks_performed = 0;
         means.swap(pi);
+
+#ifdef ENABLE_RW
+        uint32_t num_of_walks_performed = 0;
         FLOAT_TYPE r_sum = 0;
         auto &active_ids = _whole_graph_structure.active_ids;
         auto &active_residuals = _whole_graph_structure.active_residuals;
@@ -428,6 +438,25 @@ public:
         for (auto &mean :means) {
             mean *= one_over_num_walks_x_scale_factor;
         }
+#else
+        for (VertexIdType id = 0; id < numOfVertices; ++id) {
+            FLOAT_TYPE &residual = residuals[id];
+            if (residual != 0) {
+                const FLOAT_TYPE alpha_residual = _alpha * residuals[id];
+                means[id] += alpha_residual;
+                residuals[id] -= alpha_residual;
+            }
+        }
+
+        // compute bounds
+        const FLOAT_TYPE one_over_num_walks = (1.0f / num_walks);
+        const auto scale_factor = static_cast<FLOAT_TYPE>(1.0 / (1.0 - residuals[numOfVertices] * one_over_num_walks
+                                                                 - means[numOfVertices] * one_over_num_walks));
+        const auto one_over_num_walks_x_scale_factor = one_over_num_walks * scale_factor;
+        for (auto &mean :means) {
+            mean *= one_over_num_walks_x_scale_factor;
+        }
+#endif
         means[numOfVertices] = 0;
     }
 };
