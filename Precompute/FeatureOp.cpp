@@ -59,7 +59,6 @@ public:
             // walkCache.load(param.data_folder + "/index.bin");
             graph.reset_set_dummy_neighbor();
         }
-        graph.reset_set_dummy_neighbor();
         graph.fill_dead_end_neighbor_with_id();
 
         thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
@@ -170,9 +169,9 @@ public:
     VertexIdType re_feat_num = 0;       // number of reused features
 
 protected:
-    std::vector<VertexIdType> base_nodes;
-    MyMatrix base_matrix;
-    MyMatrix base_result;
+    std::vector<VertexIdType> base_idx; // index of base features
+    MyMatrix base_matrix;               // matrix of base features
+    MyMatrix base_result;               // output result (on all features and nodes)
 
 public:
 
@@ -181,7 +180,7 @@ public:
             base_size(std::max(VertexIdType (3u), VertexIdType (feat_size * param.base_ratio))),
             base_matrix(base_size, Vt_num),
             base_result(base_size, V_num) {
-        base_nodes = select_base(feature_matrix, base_matrix, base_size);
+        base_idx = select_base(feature_matrix, base_matrix);
         printf("Base size: %ld \n", base_result.size());
         time_reuse.resize(thread_num, 0);
     }
@@ -219,7 +218,7 @@ public:
             SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
             std::vector<PageRankScoreType> &_seed, std::vector<PageRankScoreType> &_raw_seed) {
         for (VertexIdType idx = 0; idx < base_size; idx++) {
-            if (base_nodes[idx] == i) {
+            if (base_idx[idx] == i) {
                 // printf("ID: %4" IDFMT "  is base\n", i);
                 double time_start = getCurrentTime();
                 std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix[i%spt_size].begin());
@@ -343,6 +342,35 @@ public:
             total_time += getCurrentTime() - time_start;
             save_output(spt_left, spt_right);
         }
+    }
+
+};
+
+
+class Base_pca : public Base {
+public:
+    VertexIdType base_size;
+    // statistics
+    std::vector<double> time_reuse;
+    PageRankScoreType avg_tht = 0;      // base theta
+    PageRankScoreType avg_res = 0;      // reuse residue
+    VertexIdType re_feat_num = 0;       // number of reused features
+
+protected:
+    MyMatrix theta_matrix;              // matrix of principal directions
+    MyMatrix base_matrix;               // matrix of principal components
+    MyMatrix base_result;               // output result (on all features and nodes)
+
+public:
+
+    Base_pca (Graph &_graph, Param &_param) :
+            Base(_graph, _param),
+            base_size(std::max(VertexIdType (3u), VertexIdType (feat_size * param.base_ratio))),
+            base_matrix(base_size, Vt_num),
+            base_result(base_size, V_num) {
+        theta_matrix = select_pc(feature_matrix, base_matrix);
+        printf("Base size: %ld \n", base_result.size());
+        time_reuse.resize(thread_num, 0);
     }
 
 };

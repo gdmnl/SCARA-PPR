@@ -115,8 +115,9 @@ calc_L2_distance(std::vector<FLOAT_TYPE> &V1, std::vector<FLOAT_TYPE> &V2) {
 
 // ==================== Reuse functions
 inline std::vector<VertexIdType>
-select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix, size_t base_size) {
-    std::vector<VertexIdType> base_nodes(base_size, 0);                                        // list of base nodes
+select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
+    VertexIdType base_size = base_matrix.nrows();
+    std::vector<VertexIdType> base_idx(base_size, 0);                                          // index of base features
     std::vector<IdScorePair<PageRankScoreType>> min_counter(feature_matrix.size(), {0, 0.0});  // (min base id, min norm) for each feature
     // Find minimum distance feature for each feature
     for (VertexIdType i = 0; i < feature_matrix.size(); i++) {
@@ -144,9 +145,9 @@ select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix, size_t base_size) {
         // printf("Base %4d: dis: %.8f, tar: %4d\n", i, min_counter[i].score, min_counter[i].id);
         base_matrix.set_row(i, feature_matrix[min_counter[i].id]);
         // base_matrix[i].swap(feature_matrix[min_counter[i].id]);
-        base_nodes[i] = min_counter[i].id;
+        base_idx[i] = min_counter[i].id;
     }
-    return base_nodes;
+    return base_idx;
 }
 
 template <class FLOAT_TYPE>
@@ -168,6 +169,15 @@ reuse_weight(std::vector<FLOAT_TYPE> &raw_seed, MyMatrix &base_matrix) {
         base_weight[idx_min] += theta;
     }
     return base_weight;
+}
+
+inline MyMatrix select_pc(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
+    VertexIdType feat_size = feature_matrix.nrows();
+    VertexIdType Vt_num    = feature_matrix.ncols();
+    VertexIdType base_size = base_matrix.nrows();
+    MyMatrix theta_matrix(feat_size, base_size);
+    // TODO: https://github.com/kazuotani14/RandomizedSvd; https://github.com/kartikey-vyas/fast-pca
+    return theta_matrix;
 }
 
 #endif  // SCARA_FEATUREOP_H
