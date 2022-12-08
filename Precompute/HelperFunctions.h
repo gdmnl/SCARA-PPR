@@ -40,7 +40,6 @@ struct Param {
     std::string algorithm = "featpush";
     std::string data_folder;
     std::string estimation_folder;
-    unsigned int split_num = 1;
     unsigned int thread_num = 1;
     unsigned int seed = 0;
     float epsilon = 0.5;
@@ -152,39 +151,34 @@ load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
 
 inline size_t
 load_feature(std::vector<VertexIdType> &Vt_nodes, MyMatrix &feature_matrix,
-    std::string feature_path, const unsigned int split_num) {
+    std::string feature_path) {
     VertexIdType index = 0;
     VertexIdType sumrow = 0;
     std::vector<unsigned long> shape;
     bool fortran_order;
     std::vector<float> arr_np;
 
-    for (int spt = 0; spt < split_num; spt++) {
-        std::string spt_path = feature_path;
-        if (split_num > 1) {
-            spt_path = spt_path.insert(feature_path.length() - 4, '_' + std::to_string(spt));
-        }
-        shape.clear();
-        arr_np.clear();
-        npy::LoadArrayFromNumpy(spt_path, shape, fortran_order, arr_np);
-        auto feature_data = arr_np.data();
-        VertexIdType nrows = shape[0];   // node num Vt_num/split_num
-        VertexIdType ncols = shape[1];   // feature size F
-        if (feature_matrix.empty())
-            feature_matrix.allocate(ncols, Vt_nodes.size());  // use feature as rows
-        std::cout<<"Input "<<spt_path<<": "<<nrows<<" "<<ncols<<std::endl;
+    shape.clear();
+    arr_np.clear();
+    npy::LoadArrayFromNumpy(feature_path, shape, fortran_order, arr_np);
+    auto feature_data = arr_np.data();
+    VertexIdType nrows = shape[0];   // node num Vt_num
+    VertexIdType ncols = shape[1];   // feature size F
+    if (feature_matrix.empty())
+        feature_matrix.allocate(ncols, Vt_nodes.size());  // use feature as rows
+    std::cout<<"Input "<<feature_path<<": "<<nrows<<" "<<ncols<<std::endl;
 
-        // Save each node vector (of length F) to feature_matrix
-        for (VertexIdType row = 0; row < nrows; row ++) {
-            if (sumrow + row == Vt_nodes[index]) {
-                index++;
-                std::vector<float> feature_array(feature_data+row*ncols, feature_data+row*ncols+ncols);
-                feature_matrix.set_col(sumrow + row, feature_array);
-            }
+    // Save each node vector (of length F) to feature_matrix
+    for (VertexIdType row = 0; row < nrows; row ++) {
+        if (sumrow + row == Vt_nodes[index]) {
+            index++;
+            std::vector<float> feature_array(feature_data+row*ncols, feature_data+row*ncols+ncols);
+            feature_matrix.set_col(sumrow + row, feature_array);
         }
-        sumrow += nrows;
-        // std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
     }
+    sumrow += nrows;
+    // std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
+
     std::cout<<"Feature size: "<<feature_matrix.size()<<" "<<feature_matrix[0].size()<<std::endl;
     return feature_matrix.size();
 }

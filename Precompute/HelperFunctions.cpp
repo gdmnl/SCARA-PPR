@@ -114,9 +114,6 @@ Param parseArgs(int nargs, char **args) {
         } else if (para == "seed") {
             rtn.seed = std::stoi(getNextWord(arg));
             printf("Random Seed: %d\n", rtn.seed);
-        } else if (para == "split_num") {
-            rtn.split_num = std::stoi(getNextWord(arg));
-            printf("Number of Splits: %d\n", rtn.split_num);
         } else if (para == "thread_num") {
             rtn.thread_num = std::stoi(getNextWord(arg));
             printf("Number of threads: %d\n", rtn.thread_num);

@@ -29,8 +29,7 @@ public:
     VertexIdType V_num;                 // number of vertices
     VertexIdType Vt_num;                // number of queried nodes
     VertexIdType feat_size;             // size of feature
-    VertexIdType spt_size;              // size of feature per split (ceiling)
-    VertexIdType thd_size;              // size of feature per thread per split
+    VertexIdType thd_size;              // size of feature per thread
     // statistics
     double total_time = 0;
     std::vector<double> time_read;
@@ -53,22 +52,21 @@ public:
             graph(_graph),
             param(_param) {
         Vt_num = load_query(Vt_nodes, param.query_file);
-        feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
-        spt_size = (feat_size + param.split_num - 1) / param.split_num;
-        out_matrix.allocate(spt_size, V_num);   // spt_size rows, V_num columns
+        feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file);
+        out_matrix.allocate(feat_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
         // Perform cached random walk
 #ifdef ENABLE_RW
-         if (param.index) {
+        if (param.index) {
             graph.set_dummy_neighbor(graph.get_dummy_id());
             walkCache.generate();
             graph.reset_set_dummy_neighbor();
         }
 #endif
-         graph.fill_dead_end_neighbor_with_id();
+        graph.fill_dead_end_neighbor_with_id();
 
-        thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
-        thd_size = (spt_size + thread_num - 1) / thread_num;
+        thread_num = (VertexIdType) param.thread_num;
+        thd_size = (feat_size + thread_num - 1) / thread_num;
         time_read.resize(thread_num, 0);
         time_write.resize(thread_num, 0);
         time_push.resize(thread_num, 0);
@@ -96,7 +94,7 @@ public:
         // Save embedding vector of feature i on all nodes to out_matrix
         time_start = getCurrentTime();
         std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-                         out_matrix[i%spt_size].begin());
+                         out_matrix[i].begin());
         time_write[tid] += getCurrentTime() - time_start;
     }
 
@@ -111,13 +109,8 @@ public:
 
     void save_output(const VertexIdType feat_left, const VertexIdType feat_right) {
         if (param.output_estimations) {
-            VertexIdType spt = feat_left / spt_size;    // index of split
             std::stringstream res_file;
-            if (param.split_num <= 1) {
-                res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
-            } else {
-                res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
-            }
+            res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
             output_feature(out_matrix.get_data(), res_file.str(), feat_right - feat_left, V_num);
         }
     }
@@ -131,39 +124,32 @@ public:
     }
 
     void push() {
-        // !: output matrix corrupts when split_num > 1
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            std::vector<std::thread> threads;
+        std::vector<std::thread> threads;
 
-            double time_start = getCurrentTime();
-            for (VertexIdType thd_left = spt_left; thd_left < spt_right; thd_left += thd_size) {
-                VertexIdType thd_right = std::min(spt_right, thd_left + thd_size);
-                VertexIdType tid = thd_left / thd_size;
-                threads.emplace_back(std::thread(&Base::push_thread, this, thd_left, thd_right, tid));
-            }
-            for (auto &t : threads) {
-                t.join();
-            }
-            total_time += getCurrentTime() - time_start;
-
-            save_output(spt_left, spt_right);
+        double time_start = getCurrentTime();
+        for (VertexIdType thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
+            VertexIdType thd_right = std::min(feat_size, thd_left + thd_size);
+            VertexIdType tid = thd_left / thd_size;
+            threads.emplace_back(std::thread(&Base::push_thread, this, thd_left, thd_right, tid));
         }
+        for (auto &t : threads) {
+            t.join();
+        }
+        total_time += getCurrentTime() - time_start;
+
+        save_output(0, feat_size);
     }
 
     // No threading, debug use
     void push_single() {
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            double time_start = getCurrentTime();
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-            std::vector<PageRankScoreType> seed;
-            for (VertexIdType i = spt_left; i < spt_right; i++) {
-                push_one(i, 0, graph_structure, seed);
-            }
-            total_time += getCurrentTime() - time_start;
-            save_output(spt_left, spt_right);
+        double time_start = getCurrentTime();
+        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
+        std::vector<PageRankScoreType> seed;
+        for (VertexIdType i = 0; i < feat_size; i++) {
+            push_one(i, 0, graph_structure, seed);
         }
+        total_time += getCurrentTime() - time_start;
+        save_output(0, feat_size);
     }
 
 };
@@ -235,7 +221,7 @@ public:
             if (base_idx[idx] == i) {
                 // printf("ID: %4" IDFMT "  is base\n", i);
                 double time_start = getCurrentTime();
-                std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix[i%spt_size].begin());
+                std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix[i].begin());
                 time_write[tid] += getCurrentTime() - time_start;
                 return;
             }
@@ -277,7 +263,7 @@ public:
         }
         // Save embedding vector of feature i on all nodes to out_matrix
         std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-                         out_matrix[i%spt_size].begin());
+                         out_matrix[i].begin());
         time_write[tid] += getCurrentTime() - time_start;
     }
 
@@ -319,23 +305,20 @@ public:
         printf("Time Used on Base %.6f\n", total_time);
 
         // Calculate rest PPR
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            std::vector<std::thread> threads;
+        std::vector<std::thread> threads;
 
-            double time_start = getCurrentTime();
-            for (VertexIdType thd_left = spt_left; thd_left < spt_right; thd_left += thd_size) {
-                VertexIdType thd_right = std::min(spt_right, thd_left + thd_size);
-                VertexIdType tid = thd_left / thd_size;
-                threads.emplace_back(std::thread(&Base_reuse::push_thread_rest, this, thd_left, thd_right, tid));
-            }
-            for (auto &t : threads) {
-                t.join();
-            }
-            total_time += getCurrentTime() - time_start;
-
-            save_output(spt_left, spt_right);
+        double time_start = getCurrentTime();
+        for (VertexIdType thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
+            VertexIdType thd_right = std::min(feat_size, thd_left + thd_size);
+            VertexIdType tid = thd_left / thd_size;
+            threads.emplace_back(std::thread(&Base_reuse::push_thread_rest, this, thd_left, thd_right, tid));
         }
+        for (auto &t : threads) {
+            t.join();
+        }
+        total_time += getCurrentTime() - time_start;
+
+        save_output(0, feat_size);
     }
 
     // No multithreading, debug use
@@ -351,15 +334,12 @@ public:
         total_time += getCurrentTime() - time_start;
         printf("Time Used on Base %.6f\n", total_time);
         // Calculate rest PPR
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            double time_start = getCurrentTime();
-            for (VertexIdType i = spt_left; i < spt_right; i++) {
-                push_one_rest(i, 0, graph_structure, seed, raw_seed);
-            }
-            total_time += getCurrentTime() - time_start;
-            save_output(spt_left, spt_right);
+        double time_start = getCurrentTime();
+        for (VertexIdType i = 0; i < feat_size; i++) {
+            push_one_rest(i, 0, graph_structure, seed, raw_seed);
         }
+        total_time += getCurrentTime() - time_start;
+        save_output(0, feat_size);
     }
 
 };
