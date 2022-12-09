@@ -52,20 +52,20 @@ public:
             lower_threshold(1.0 / _graph.getNumOfVertices()),
             graph(_graph),
             param(_param) {
-        Vt_num = load_query(Vt_nodes, param.query_file);
-        feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file, param.split_num);
+        Vt_num = load_query(Vt_nodes, param.query_file, V_num);
+        feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file);
         spt_size = (feat_size + param.split_num - 1) / param.split_num;
         out_matrix.allocate(spt_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
         // Perform cached random walk
 #ifdef ENABLE_RW
-         if (param.index) {
+        if (param.index) {
             graph.set_dummy_neighbor(graph.get_dummy_id());
             walkCache.generate();
             graph.reset_set_dummy_neighbor();
         }
 #endif
-         graph.fill_dead_end_neighbor_with_id();
+        graph.fill_dead_end_neighbor_with_id();
 
         thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
         thd_size = (spt_size + thread_num - 1) / thread_num;
