@@ -9,18 +9,18 @@
 
 class MyQueue {
 private:
-    const VertexIdType mask;
-    std::vector<VertexIdType> queue;
-    VertexIdType num = 0;
-    VertexIdType idx_front = 0;
-    VertexIdType idx_last_plus_one = 0;
+    const NInt mask;
+    IntVector queue;
+    NInt num = 0;
+    NInt idx_front = 0;
+    NInt idx_last_plus_one = 0;
 private:
-    static inline VertexIdType compute_queue_size(const VertexIdType &_numOfVertices) {
+    static inline NInt compute_queue_size(const NInt &_numOfVertices) {
         return (1u) << (uint32_t) ceil(log2(_numOfVertices + 2u));
     }
 
 public:
-    explicit MyQueue(const VertexIdType &_numOfVertices) :
+    explicit MyQueue(const NInt &_numOfVertices) :
             mask(compute_queue_size(_numOfVertices) - 1),
             queue(mask + 2u, 0) {}
 
@@ -31,11 +31,11 @@ public:
     }
 
 
-    inline const VertexIdType &size() const {
+    inline const NInt &size() const {
         return num;
     }
 
-    inline const VertexIdType &front() const {
+    inline const NInt &front() const {
         return queue[idx_front];
     }
 
@@ -45,7 +45,7 @@ public:
         idx_front &= mask;
     }
 
-    inline void push(const VertexIdType &_elem) {
+    inline void push(const NInt &_elem) {
         ++num;
         queue[idx_last_plus_one] = _elem;
         ++idx_last_plus_one;
@@ -63,7 +63,7 @@ struct FwdPushStructure {
     // reserve one slot for the dummy vertex
     std::vector<bool> is_active;
 
-    explicit FwdPushStructure(const VertexIdType &numOfVertices) :
+    explicit FwdPushStructure(const NInt &numOfVertices) :
             active_vertices(numOfVertices + 1),
             is_active(numOfVertices + 1, false) {}
 };
@@ -74,48 +74,48 @@ struct FwdPushStructure {
  */
 class MyMatrix {
 private:
-    std::vector<std::vector<PageRankScoreType>> data;
-    VertexIdType nrow = 0;
-    VertexIdType ncol = 0;
+    std::vector<FltVector> data;
+    NInt nrow = 0;
+    NInt ncol = 0;
 
 public:
     explicit MyMatrix() {}
 
-    explicit MyMatrix(const VertexIdType &_nrows, const VertexIdType &_ncols) :
-        data(_nrows, std::vector<PageRankScoreType>(_ncols)),
+    explicit MyMatrix(const NInt &_nrows, const NInt &_ncols) :
+        data(_nrows, FltVector(_ncols)),
         nrow(_nrows),
         ncol(_ncols) {
-        // std::cout << "Init Matrix of: " << nrow << " " << ncol << std::endl;
+        // cout << "Init Matrix of: " << nrow << " " << ncol << endl;
     }
 
-    void allocate(const VertexIdType &_nrows, const VertexIdType &_ncols) {
-        // data.resize(_nrows, std::vector<PageRankScoreType>(_ncols, 0));
-        data = std::vector<std::vector<PageRankScoreType>>(_nrows, std::vector<PageRankScoreType>(_ncols));
+    void allocate(const NInt &_nrows, const NInt &_ncols) {
+        // data.resize(_nrows, FltVector(_ncols, 0));
+        data = std::vector<FltVector>(_nrows, FltVector(_ncols));
         nrow = _nrows;
         ncol = _ncols;
-        // std::cout << "Allocate Matrix of: " << nrow << " " << ncol << std::endl;
+        // cout << "Allocate Matrix of: " << nrow << " " << ncol << endl;
     }
 
-    std::vector<PageRankScoreType> &operator[] (const VertexIdType &row) {
+    FltVector &operator[] (const NInt &row) {
         return data[row];
     }
 
-    const std::vector<PageRankScoreType> &operator[] (const VertexIdType &row) const {
+    const FltVector &operator[] (const NInt &row) const {
         return data[row];
     }
 
-    inline const VertexIdType size() const { return nrow; }
+    inline const NInt size() const { return nrow; }
 
-    inline const VertexIdType nrows() const { return nrow; }
+    inline const NInt nrows() const { return nrow; }
 
-    inline const VertexIdType ncols() const { return ncol; }
+    inline const NInt ncols() const { return ncol; }
 
     inline bool empty() const {
         return nrow == 0;
     }
 
     inline bool is_regular() const {
-        for (VertexIdType i = 0; i < nrow; ++i) {
+        for (NInt i = 0; i < nrow; ++i) {
             if (data[i].size() != ncol) {
                 return false;
             }
@@ -123,19 +123,19 @@ public:
         return true;
     }
 
-    inline bool is_regular(const VertexIdType &row) const {
+    inline bool is_regular(const NInt &row) const {
         return data[row].size() == ncol;
     }
 
-    inline void set_col(const VertexIdType &col, const std::vector<PageRankScoreType> &_data) {
+    inline void set_col(const NInt &col, const FltVector &_data) {
         assert(col < ncol);
         assert(_data.size() == nrow);
-        for (VertexIdType i = 0; i < nrow; ++i) {
+        for (NInt i = 0; i < nrow; ++i) {
             data[i][col] = _data[i];
         }
     }
 
-    inline void set_row(const VertexIdType &row, const std::vector<PageRankScoreType> &_data) {
+    inline void set_row(const NInt &row, const FltVector &_data) {
         data[row] = _data;
         data[row].resize(ncol);
     }
@@ -147,29 +147,29 @@ public:
  */
 class My2DVector {
 private:
-    std::vector<PageRankScoreType> data;
-    VertexIdType nrow = 0;
-    VertexIdType ncol = 0;
+    FltVector data;
+    NInt nrow = 0;
+    NInt ncol = 0;
 
     friend class My2DVectorRow;
 
     class My2DVectorRow {
     private:
         My2DVector &parent;
-        VertexIdType row;
+        NInt row;
     public:
-        My2DVectorRow(My2DVector &_parent, const VertexIdType &_row) :
+        My2DVectorRow(My2DVector &_parent, const NInt &_row) :
             parent(_parent), row(_row) {}
 
-        PageRankScoreType &operator[] (const VertexIdType &col) {
+        ScoreFlt &operator[] (const NInt &col) {
             return parent.data[row * parent.ncol + col];
         }
 
-        const PageRankScoreType &operator[] (const VertexIdType &col) const {
+        const ScoreFlt &operator[] (const NInt &col) const {
             return parent.data[row * parent.ncol + col];
         }
 
-        std::vector<PageRankScoreType>::iterator begin() {
+        FltVector::iterator begin() {
             return parent.data.begin() + row * parent.ncol;
         }
     };
@@ -177,33 +177,33 @@ private:
 public:
     explicit My2DVector() {}
 
-    explicit My2DVector(const VertexIdType &_nrows, const VertexIdType &_ncols) :
+    explicit My2DVector(const NInt &_nrows, const NInt &_ncols) :
         data(_nrows * _ncols),
         nrow(_nrows),
         ncol(_ncols) {
-        // std::cout << "Init 2DVector of: " << nrow << " " << ncol << std::endl;
+        // cout << "Init 2DVector of: " << nrow << " " << ncol << endl;
     }
 
-    void allocate(const VertexIdType &_nrows, const VertexIdType &_ncols) {
+    void allocate(const NInt &_nrows, const NInt &_ncols) {
         data.resize(_nrows * _ncols);
         nrow = _nrows;
         ncol = _ncols;
-        // std::cout << "Allocate 2DVector of: " << nrow << " " << ncol << std::endl;
+        // cout << "Allocate 2DVector of: " << nrow << " " << ncol << endl;
     }
 
-    My2DVectorRow operator[] (const VertexIdType &row) {
+    My2DVectorRow operator[] (const NInt &row) {
         return My2DVectorRow(*this, row);
     }
 
-    inline const VertexIdType size() const { return nrow * ncol; }
+    inline const NInt size() const { return nrow * ncol; }
 
-    inline const VertexIdType nrows() const { return nrow; }
+    inline const NInt nrows() const { return nrow; }
 
-    inline const VertexIdType ncols() const { return ncol; }
+    inline const NInt ncols() const { return ncol; }
 
-    inline std::vector<PageRankScoreType>& get_data() { return data; }
+    inline FltVector& get_data() { return data; }
 
-    inline const std::vector<PageRankScoreType>& get_data() const { return data; }
+    inline const FltVector& get_data() const { return data; }
 
     inline bool empty() const {
         return data.empty();

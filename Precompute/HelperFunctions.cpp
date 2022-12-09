@@ -73,7 +73,7 @@ Param parseArgs(int nargs, char **args) {
         arg = args[cnt++];
         if (para == "algo") {
             rtn.algorithm = std::string(arg);
-            std::cout << "Algorithm Parameter: " << rtn.algorithm << std::endl;
+            cout << "Algorithm Parameter: " << rtn.algorithm << endl;
             if (algo_set.find(rtn.algorithm) == algo_set.end()) {
                 printf("Unknown Algorithm.\n");
                 exit(0);
@@ -110,7 +110,7 @@ Param parseArgs(int nargs, char **args) {
                 printf("Unknown option -%s!\n", option.c_str());
                 exit(0);
             }
-            std::cout << "With Index: " << rtn.index << "\n";
+            cout << "With Index: " << rtn.index << "\n";
         } else if (para == "seed") {
             rtn.seed = std::stoi(getNextWord(arg));
             printf("Random Seed: %d\n", rtn.seed);

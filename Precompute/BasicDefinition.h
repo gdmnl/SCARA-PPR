@@ -7,46 +7,47 @@
 
 #include <queue>
 
-typedef unsigned long VertexIdType;
-typedef unsigned long EdgeSizeType;
+using std::cout;
+using std::endl;
+
 #define IDFMT "lu"
-typedef float PageRankScoreType;
+typedef unsigned long NInt;         // Type of Node / Edge size
+typedef float ScoreFlt;             // Type of PPR Score
+typedef std::vector<NInt> IntVector;
+typedef std::vector<ScoreFlt> FltVector;
 
-
-template<class FLOAT_TYPE>
+template<class FLT>
 struct IdScorePair {
-    VertexIdType id = 0;
-    FLOAT_TYPE score = 0;
+    NInt id = 0;
+    FLT score = 0;
 
-    IdScorePair(const VertexIdType &_id = 0, const FLOAT_TYPE &_score = 0) :
+    IdScorePair(const NInt &_id = 0, const FLT &_score = 0) :
             id(_id), score(_score) {}
 };
 
-template<class FLOAT_TYPE>
+template<class FLT>
 struct IdScorePairComparatorGreater {
     // Compare 2 IdScorePair objects using name
-    bool operator()(const IdScorePair<FLOAT_TYPE> &pair1, const IdScorePair<FLOAT_TYPE> &pair2) {
+    bool operator()(const IdScorePair<FLT> &pair1, const IdScorePair<FLT> &pair2) {
         return pair1.score > pair2.score || pair1.score == pair2.score && pair1.id < pair2.id;
     }
 };
 
-template<class FLOAT_TYPE>
+template<class FLT>
 struct IdScorePairComparatorLess {
     // Compare 2 IdScorePair objects using name
-    bool operator()(const IdScorePair<FLOAT_TYPE> &pair1, const IdScorePair<FLOAT_TYPE> &pair2) {
+    bool operator()(const IdScorePair<FLT> &pair1, const IdScorePair<FLT> &pair2) {
         return pair1.score < pair2.score || pair1.score == pair2.score && pair1.id < pair2.id;
     }
 };
 
-typedef std::priority_queue<IdScorePair<float>, std::vector<IdScorePair<float> >, IdScorePairComparatorGreater<float> > IdScorePairMaxQueue_float;
-
 struct Edge {
-    VertexIdType from_id;
-    VertexIdType to_id;
+    NInt from_id;
+    NInt to_id;
 
     Edge() : from_id(0), to_id(0) {}
 
-    Edge(const VertexIdType &_from, const VertexIdType &_to) :
+    Edge(const NInt &_from, const NInt &_to) :
             from_id(_from), to_id(_to) {}
 
     bool operator<(const Edge &_edge) const {

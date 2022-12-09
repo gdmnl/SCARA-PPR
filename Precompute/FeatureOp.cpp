@@ -14,22 +14,22 @@ protected:
     Param &param;
     Graph &graph;
     class SpeedPPR ppr;
-    std::vector<VertexIdType> Vt_nodes; // list of queried nodes
+    IntVector Vt_nodes; // list of queried nodes
     MyMatrix feature_matrix;
 #ifdef ENABLE_RW
     WalkCache walkCache;
 #endif
 
-    VertexIdType thread_num;            // number of threads
-    PageRankScoreType epsilon;
-    PageRankScoreType alpha;
-    PageRankScoreType lower_threshold;
+    NInt thread_num;            // number of threads
+    ScoreFlt epsilon;
+    ScoreFlt alpha;
+    ScoreFlt lower_threshold;
 
 public:
-    VertexIdType V_num;                 // number of vertices
-    VertexIdType Vt_num;                // number of queried nodes
-    VertexIdType feat_size;             // size of feature
-    VertexIdType thd_size;              // size of feature per thread
+    NInt V_num;                 // number of vertices
+    NInt Vt_num;                // number of queried nodes
+    NInt feat_size;             // size of feature
+    NInt thd_size;              // size of feature per thread
     // statistics
     double total_time = 0;
     std::vector<double> time_read;
@@ -66,16 +66,15 @@ public:
 #endif
         graph.fill_dead_end_neighbor_with_id();
 
-        thread_num = (VertexIdType) param.thread_num;
+        thread_num = (NInt) param.thread_num;
         thd_size = (feat_size + thread_num - 1) / thread_num;
         time_read.resize(thread_num, 0);
         time_write.resize(thread_num, 0);
         time_push.resize(thread_num, 0);
     }
 
-    void push_one(const VertexIdType i, const VertexIdType tid,
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
-            std::vector<PageRankScoreType> &_seed) {
+    void push_one(const NInt i, const NInt tid,
+            SpeedPPR::GStruct<ScoreFlt> &_gstruct, FltVector &_seed) {
         // printf("ID: %4" IDFMT "\n", i);
         double time_start = getCurrentTime();
         propagate_vector(feature_matrix[i], _seed, Vt_nodes, V_num, true);
@@ -84,31 +83,31 @@ public:
         time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache);
+            ppr.calc_ppr_cache(_gstruct, _seed, epsilon, alpha, lower_threshold, walkCache);
         else
-            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
+            ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold);
 #else
-        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
+        ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         // Save embedding vector of feature i on all nodes to out_matrix
         time_start = getCurrentTime();
-        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
+        std::swap_ranges(_gstruct.means.begin(), _gstruct.means.end()-2,
                          out_matrix[i].begin());
         time_write[tid] += getCurrentTime() - time_start;
     }
 
-    void push_thread(const VertexIdType feat_left, const VertexIdType feat_right, const VertexIdType tid) {
-        // std::cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<std::endl;
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;
-        for (VertexIdType i = feat_left; i < feat_right; i++) {
-            push_one(i, tid, graph_structure, seed);
+    void push_thread(const NInt feat_left, const NInt feat_right, const NInt tid) {
+        // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        FltVector seed;
+        for (NInt i = feat_left; i < feat_right; i++) {
+            push_one(i, tid, gstruct, seed);
         }
     }
 
-    void save_output(const VertexIdType feat_left, const VertexIdType feat_right) {
+    void save_output(const NInt feat_left, const NInt feat_right) {
         if (param.output_estimations) {
             std::stringstream res_file;
             res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
@@ -128,9 +127,9 @@ public:
         std::vector<std::thread> threads;
 
         double time_start = getCurrentTime();
-        for (VertexIdType thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
-            VertexIdType thd_right = std::min(feat_size, thd_left + thd_size);
-            VertexIdType tid = thd_left / thd_size;
+        for (NInt thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
+            NInt thd_right = std::min(feat_size, thd_left + thd_size);
+            NInt tid = thd_left / thd_size;
             threads.emplace_back(std::thread(&Base::push_thread, this, thd_left, thd_right, tid));
         }
         for (auto &t : threads) {
@@ -144,10 +143,10 @@ public:
     // No threading, debug use
     void push_single() {
         double time_start = getCurrentTime();
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;
-        for (VertexIdType i = 0; i < feat_size; i++) {
-            push_one(i, 0, graph_structure, seed);
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        FltVector seed;
+        for (NInt i = 0; i < feat_size; i++) {
+            push_one(i, 0, gstruct, seed);
         }
         total_time += getCurrentTime() - time_start;
         save_output(0, feat_size);
@@ -158,15 +157,15 @@ public:
 class Base_reuse : public Base {
 
 public:
-    VertexIdType base_size;
+    NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    PageRankScoreType avg_tht = 0;      // base theta
-    PageRankScoreType avg_res = 0;      // reuse residue
-    VertexIdType re_feat_num = 0;       // number of reused features
+    ScoreFlt avg_tht = 0;      // base theta
+    ScoreFlt avg_res = 0;      // reuse residue
+    NInt re_feat_num = 0;       // number of reused features
 
 protected:
-    std::vector<VertexIdType> base_idx; // index of base features
+    IntVector base_idx; // index of base features
     MyMatrix base_matrix;               // matrix of base features
     MyMatrix base_result;               // output result (on all features and nodes)
 
@@ -174,7 +173,7 @@ public:
 
     Base_reuse(Graph &_graph, Param &_param) :
             Base(_graph, _param),
-            base_size(std::max(VertexIdType (3u), VertexIdType (feat_size * param.base_ratio))),
+            base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
             base_matrix(base_size, Vt_num),
             base_result(base_size, V_num) {
         base_idx = select_base(feature_matrix, base_matrix);
@@ -182,9 +181,8 @@ public:
         time_reuse.resize(thread_num, 0);
     }
 
-    void push_one_base(const VertexIdType idx, const VertexIdType tid,
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
-            std::vector<PageRankScoreType> &_seed) {
+    void push_one_base(const NInt idx, const NInt tid,
+            SpeedPPR::GStruct<ScoreFlt> &_gstruct, FltVector &_seed) {
         // printf("ID: %4" IDFMT "  as base\n", idx);
         double time_start = getCurrentTime();
         propagate_vector(base_matrix[idx], _seed, Vt_nodes, V_num, false);
@@ -193,32 +191,31 @@ public:
         time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, param.gamma);
+            ppr.calc_ppr_cache(_gstruct, _seed, epsilon, alpha, lower_threshold, walkCache, param.gamma);
         else
-            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
+            ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, param.gamma);
 #else
-        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
+        ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, param.gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        base_result.set_row(idx, _graph_structure.means);
+        base_result.set_row(idx, _gstruct.means);
         time_write[tid] += getCurrentTime() - time_start;
     }
 
-    void push_thread_base(const VertexIdType feat_left, const VertexIdType feat_right, const VertexIdType tid) {
-        // std::cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<std::endl;
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;
-        for (VertexIdType i = feat_left; i < feat_right; i++) {
-            push_one_base(i, tid, graph_structure, seed);
+    void push_thread_base(const NInt feat_left, const NInt feat_right, const NInt tid) {
+        // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        FltVector seed;
+        for (NInt i = feat_left; i < feat_right; i++) {
+            push_one_base(i, tid, gstruct, seed);
         }
     }
 
-    void push_one_rest(const VertexIdType i, const VertexIdType tid,
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
-            std::vector<PageRankScoreType> &_seed, std::vector<PageRankScoreType> &_raw_seed) {
-        for (VertexIdType idx = 0; idx < base_size; idx++) {
+    void push_one_rest(const NInt i, const NInt tid,
+            SpeedPPR::GStruct<ScoreFlt> &_gstruct, FltVector &_seed, FltVector &_raw_seed) {
+        for (NInt idx = 0; idx < base_size; idx++) {
             if (base_idx[idx] == i) {
                 // printf("ID: %4" IDFMT "  is base\n", i);
                 double time_start = getCurrentTime();
@@ -230,8 +227,8 @@ public:
 
         double time_start = getCurrentTime();
         _raw_seed.swap(feature_matrix[i]);
-        std::vector<PageRankScoreType> base_weight = reuse_weight(_raw_seed, base_matrix);
-        PageRankScoreType theta_sum = vector_L1(base_weight);
+        FltVector base_weight = reuse_weight(_raw_seed, base_matrix);
+        ScoreFlt theta_sum = vector_L1(base_weight);
         avg_tht += theta_sum;
         avg_res += vector_L1(_raw_seed);
         // printf("ID: %4" IDFMT ", theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(_raw_seed));
@@ -247,34 +244,34 @@ public:
         time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_cache(_gstruct, _seed, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
         else
-            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
 #else
-        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+        ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        for (VertexIdType idx = 0; idx < base_size; idx++){
+        for (NInt idx = 0; idx < base_size; idx++){
             if (base_weight[idx] != 0) {
-                for (VertexIdType j = 0; j < V_num; j++)
-                    _graph_structure.means[j] += base_result[idx][j] * base_weight[idx];
+                for (NInt j = 0; j < V_num; j++)
+                    _gstruct.means[j] += base_result[idx][j] * base_weight[idx];
             }
         }
         // Save embedding vector of feature i on all nodes to out_matrix
-        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
+        std::swap_ranges(_gstruct.means.begin(), _gstruct.means.end()-2,
                          out_matrix[i].begin());
         time_write[tid] += getCurrentTime() - time_start;
     }
 
-    void push_thread_rest(const VertexIdType feat_left, const VertexIdType feat_right, const VertexIdType tid) {
-        // std::cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<std::endl;
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;        // seed (length V_num) for push
-        std::vector<PageRankScoreType> raw_seed;    // seed (length Vt_num) for reuse
-        for (VertexIdType i = feat_left; i < feat_right; i++) {
-            push_one_rest(i, tid, graph_structure, seed, raw_seed);
+    void push_thread_rest(const NInt feat_left, const NInt feat_right, const NInt tid) {
+        // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        FltVector seed;        // seed (length V_num) for push
+        FltVector raw_seed;    // seed (length Vt_num) for reuse
+        for (NInt i = feat_left; i < feat_right; i++) {
+            push_one_rest(i, tid, gstruct, seed, raw_seed);
         }
     }
 
@@ -289,14 +286,14 @@ public:
 
     void push() {
         // Calculate base PPR
-        VertexIdType thread_num_base = std::min(base_size, thread_num);
-        VertexIdType thd_size_base = (base_size + thread_num_base - 1) / thread_num_base;
+        NInt thread_num_base = std::min(base_size, thread_num);
+        NInt thd_size_base = (base_size + thread_num_base - 1) / thread_num_base;
         std::vector<std::thread> threads_base;
 
         double time_start = getCurrentTime();
-        for (VertexIdType thd_left = 0; thd_left < base_size; thd_left += thd_size_base) {
-            VertexIdType thd_right = std::min(base_size, thd_left + thd_size_base);
-            VertexIdType tid = thd_left / thd_size_base;
+        for (NInt thd_left = 0; thd_left < base_size; thd_left += thd_size_base) {
+            NInt thd_right = std::min(base_size, thd_left + thd_size_base);
+            NInt tid = thd_left / thd_size_base;
             threads_base.emplace_back(std::thread(&Base_reuse::push_thread_base, this, thd_left, thd_right, tid));
         }
         for (auto &t : threads_base) {
@@ -309,9 +306,9 @@ public:
         std::vector<std::thread> threads;
 
         time_start = getCurrentTime();
-        for (VertexIdType thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
-            VertexIdType thd_right = std::min(feat_size, thd_left + thd_size);
-            VertexIdType tid = thd_left / thd_size;
+        for (NInt thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
+            NInt thd_right = std::min(feat_size, thd_left + thd_size);
+            NInt tid = thd_left / thd_size;
             threads.emplace_back(std::thread(&Base_reuse::push_thread_rest, this, thd_left, thd_right, tid));
         }
         for (auto &t : threads) {
@@ -324,20 +321,20 @@ public:
 
     // No multithreading, debug use
     void push_single() {
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;        // seed (length V_num) for push
-        std::vector<PageRankScoreType> raw_seed;    // seed (length Vt_num) for reuse
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        FltVector seed;        // seed (length V_num) for push
+        FltVector raw_seed;    // seed (length Vt_num) for reuse
         // Calculate base PPR
         double time_start = getCurrentTime();
-        for(VertexIdType i = 0; i < base_size; i++){
-            push_one_base(i, 0, graph_structure, seed);
+        for(NInt i = 0; i < base_size; i++){
+            push_one_base(i, 0, gstruct, seed);
         }
         total_time += getCurrentTime() - time_start;
         printf("Time Used on Base %.6f\n", total_time);
         // Calculate rest PPR
         time_start = getCurrentTime();
-        for (VertexIdType i = 0; i < feat_size; i++) {
-            push_one_rest(i, 0, graph_structure, seed, raw_seed);
+        for (NInt i = 0; i < feat_size; i++) {
+            push_one_rest(i, 0, gstruct, seed, raw_seed);
         }
         total_time += getCurrentTime() - time_start;
         save_output(0, feat_size);
@@ -348,12 +345,12 @@ public:
 
 class Base_pca : public Base {
 public:
-    VertexIdType base_size;
+    NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    PageRankScoreType avg_tht = 0;      // base theta
-    PageRankScoreType avg_res = 0;      // reuse residue
-    VertexIdType re_feat_num = 0;       // number of reused features
+    ScoreFlt avg_tht = 0;      // base theta
+    ScoreFlt avg_res = 0;      // reuse residue
+    NInt re_feat_num = 0;       // number of reused features
 
 protected:
     MyMatrix theta_matrix;              // matrix of principal directions
@@ -364,7 +361,7 @@ public:
 
     Base_pca (Graph &_graph, Param &_param) :
             Base(_graph, _param),
-            base_size(std::max(VertexIdType (3u), VertexIdType (feat_size * param.base_ratio))),
+            base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
             base_matrix(base_size, Vt_num),
             base_result(base_size, V_num) {
         theta_matrix = select_pc(feature_matrix, base_matrix);

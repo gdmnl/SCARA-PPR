@@ -16,20 +16,20 @@
 class Graph {
 
 private:
-    VertexIdType numOfVertices = 0;
-    EdgeSizeType numOfEdges = 0;
-    VertexIdType num_deadend_vertices = 0;
-    VertexIdType sid = 0;
-    VertexIdType dummy_id = 0;
-    PageRankScoreType alpha = 0.2;
-    EdgeSizeType max_size_edge_list = 0;
-    std::vector<VertexIdType> out_degrees;
-    std::vector<VertexIdType> in_degrees;
-    std::vector<VertexIdType> start_pos_in_out_neighbor_lists;
-    std::vector<VertexIdType> start_pos_in_appearance_pos_lists;
-    std::vector<VertexIdType> out_neighbors_lists;
-    std::vector<VertexIdType> appearance_pos_lists;
-    std::vector<VertexIdType> deadend_vertices;
+    NInt numOfVertices = 0;
+    NInt numOfEdges = 0;
+    NInt num_deadend_vertices = 0;
+    NInt sid = 0;
+    NInt dummy_id = 0;
+    ScoreFlt alpha = 0.2;
+    NInt max_size_edge_list = 0;
+    IntVector out_degrees;
+    IntVector in_degrees;
+    IntVector start_pos_in_out_neighbor_lists;
+    IntVector start_pos_in_appearance_pos_lists;
+    IntVector out_neighbors_lists;
+    IntVector appearance_pos_lists;
+    IntVector deadend_vertices;
 
 public:
 
@@ -42,7 +42,7 @@ public:
         start_pos_in_out_neighbor_lists[dummy_id + 1] = start_pos_in_out_neighbor_lists[dummy_id];
     }
 
-    inline void set_dummy_neighbor(const VertexIdType &_id) {
+    inline void set_dummy_neighbor(const NInt &_id) {
         out_degrees[dummy_id] = 1;
         start_pos_in_out_neighbor_lists[dummy_id + 1] = start_pos_in_out_neighbor_lists[dummy_id] + 1;
         out_neighbors_lists[start_pos_in_out_neighbor_lists[dummy_id]] = _id;
@@ -54,58 +54,58 @@ public:
         set_dummy_out_degree_zero();
     }
 
-    inline const VertexIdType &get_dummy_id() const {
+    inline const NInt &get_dummy_id() const {
         return dummy_id;
     }
 
-    inline const VertexIdType &get_sid() const {
+    inline const NInt &get_sid() const {
         return sid;
     }
 
-    inline const PageRankScoreType &get_alpha() const {
+    inline const ScoreFlt &get_alpha() const {
         return alpha;
     }
 
-    inline void set_alpha(const PageRankScoreType _alpha = 0.2) {
+    inline void set_alpha(const ScoreFlt _alpha = 0.2) {
         alpha = _alpha;
     }
 
-    inline void fill_dead_end_neighbor_with_id(const VertexIdType &_id) {
-        for (VertexIdType index = 0; index < num_deadend_vertices; ++index) {
-            const VertexIdType &id = deadend_vertices[index];
-            const VertexIdType &start = start_pos_in_out_neighbor_lists[id];
+    inline void fill_dead_end_neighbor_with_id(const NInt &_id) {
+        for (NInt index = 0; index < num_deadend_vertices; ++index) {
+            const NInt &id = deadend_vertices[index];
+            const NInt &start = start_pos_in_out_neighbor_lists[id];
             out_neighbors_lists[start] = _id;
         }
     }
 
     inline void fill_dead_end_neighbor_with_id() {
-        //std::cout<< "num_deadend_vertices: " << num_deadend_vertices <<std::endl;
-        for (VertexIdType index = 0; index < num_deadend_vertices; ++index) {
-            const VertexIdType &id = deadend_vertices[index];
-            const VertexIdType &start = start_pos_in_out_neighbor_lists[id];
-            VertexIdType _id = rand()%numOfVertices;
+        //cout<< "num_deadend_vertices: " << num_deadend_vertices <<endl;
+        for (NInt index = 0; index < num_deadend_vertices; ++index) {
+            const NInt &id = deadend_vertices[index];
+            const NInt &start = start_pos_in_out_neighbor_lists[id];
+            NInt _id = rand()%numOfVertices;
             out_neighbors_lists[start] = _id;
         }
     }
 
 
-    inline void change_in_neighbors_adj(const VertexIdType &_sid, const VertexIdType &_target) {
-        const VertexIdType &idx_start = start_pos_in_appearance_pos_lists[_sid];
-        const VertexIdType &idx_end = start_pos_in_appearance_pos_lists[_sid + 1];
-        for (VertexIdType index = idx_start; index < idx_end; ++index) {
+    inline void change_in_neighbors_adj(const NInt &_sid, const NInt &_target) {
+        const NInt &idx_start = start_pos_in_appearance_pos_lists[_sid];
+        const NInt &idx_end = start_pos_in_appearance_pos_lists[_sid + 1];
+        for (NInt index = idx_start; index < idx_end; ++index) {
             out_neighbors_lists[appearance_pos_lists[index]] = _target;
         }
     }
 
-    inline void restore_neighbors_adj(const VertexIdType &_sid) {
-        const VertexIdType &idx_start = start_pos_in_appearance_pos_lists[_sid];
-        const VertexIdType &idx_end = start_pos_in_appearance_pos_lists[_sid + 1];
-        for (VertexIdType index = idx_start; index < idx_end; ++index) {
+    inline void restore_neighbors_adj(const NInt &_sid) {
+        const NInt &idx_start = start_pos_in_appearance_pos_lists[_sid];
+        const NInt &idx_end = start_pos_in_appearance_pos_lists[_sid + 1];
+        for (NInt index = idx_start; index < idx_end; ++index) {
             out_neighbors_lists[appearance_pos_lists[index]] = _sid;
         }
     }
 
-    inline void set_source_and_alpha(const VertexIdType _sid, const PageRankScoreType _alpha) {
+    inline void set_source_and_alpha(const NInt _sid, const ScoreFlt _alpha) {
         sid = _sid;
         alpha = _alpha;
 //        fill_dead_end_neighbor_with_id(_sid);
@@ -115,7 +115,7 @@ public:
 
     ~Graph() = default;
 
-    inline const VertexIdType &getNumOfVertices() const {
+    inline const NInt &getNumOfVertices() const {
         return numOfVertices;
     }
 
@@ -123,18 +123,18 @@ public:
      * @param _vid
      * @return return the original out degree
      */
-    inline const VertexIdType &original_out_degree(const VertexIdType &_vid) const {
+    inline const NInt &original_out_degree(const NInt &_vid) const {
         assert(_vid < numOfVertices);
         return out_degrees[_vid];
     }
 
-    inline const VertexIdType &get_neighbor_list_start_pos(const VertexIdType &_vid) const {
+    inline const NInt &get_neighbor_list_start_pos(const NInt &_vid) const {
         assert(_vid < numOfVertices + 2);
         return start_pos_in_out_neighbor_lists[_vid];
     }
 
 
-    inline const VertexIdType &getOutNeighbor(const VertexIdType &_index) const {
+    inline const NInt &getOutNeighbor(const NInt &_index) const {
 //        if (_index >= start_pos_in_out_neighbor_lists[dummy_id + 1]) {
 //            MSG("Time to check " __FILE__)
 //            MSG(__LINE__)
@@ -143,7 +143,7 @@ public:
         return out_neighbors_lists[_index];
     }
 
-    inline const EdgeSizeType &getNumOfEdges() const {
+    inline const NInt &getNumOfEdges() const {
         return numOfEdges;
     }
 
@@ -166,7 +166,7 @@ public:
                 attribute_file.close();
             } else {
                 printf(__FILE__ "; LINE %d; File Not Exists.\n", __LINE__);
-                std::cout << _attribute_file << std::endl;
+                cout << _attribute_file << endl;
                 exit(1);
             }
         }
@@ -179,7 +179,7 @@ public:
             std::fclose(f);
         } else {
             printf("Graph::read; File Not Exists.\n");
-            std::cout << _graph_file << std::endl;
+            cout << _graph_file << endl;
             exit(1);
         }
         const auto end = getCurrentTime();
@@ -193,8 +193,8 @@ public:
         in_degrees.clear();
         in_degrees.resize(numOfVertices + 2, 0);
         for (auto &edge : edges) {
-            const VertexIdType &from_id = edge.from_id;
-            const VertexIdType &to_id = edge.to_id;
+            const NInt &from_id = edge.from_id;
+            const NInt &to_id = edge.to_id;
             // remove self loop
             if (from_id != to_id) {
                 //the edge read is a directed one
@@ -212,9 +212,9 @@ public:
 //        }
 
         // process the dead_end
-        VertexIdType degree_max = 0;
+        NInt degree_max = 0;
         deadend_vertices.clear();
-        for (VertexIdType i = 0; i < numOfVertices; ++i) {
+        for (NInt i = 0; i < numOfVertices; ++i) {
             if (out_degrees[i] == 0) {
                 deadend_vertices.emplace_back(i);
             }
@@ -226,7 +226,7 @@ public:
         // process pos_list list
         start_pos_in_appearance_pos_lists.clear();
         start_pos_in_appearance_pos_lists.resize(numOfVertices + 2, 0);
-        for (VertexIdType i = 0, j = 1; j < numOfVertices; ++i, ++j) {
+        for (NInt i = 0, j = 1; j < numOfVertices; ++i, ++j) {
             start_pos_in_appearance_pos_lists[j] = start_pos_in_appearance_pos_lists[i] + in_degrees[i];
         }
         start_pos_in_appearance_pos_lists[numOfVertices] = numOfEdges;
@@ -234,9 +234,9 @@ public:
         // process out list
         start_pos_in_out_neighbor_lists.clear();
         start_pos_in_out_neighbor_lists.resize(numOfVertices + 2, 0);
-        for (VertexIdType current_id = 0, next_id = 1; next_id < numOfVertices + 1; ++current_id, ++next_id) {
+        for (NInt current_id = 0, next_id = 1; next_id < numOfVertices + 1; ++current_id, ++next_id) {
             start_pos_in_out_neighbor_lists[next_id] =
-                    start_pos_in_out_neighbor_lists[current_id] + std::max(out_degrees[current_id], (VertexIdType) 1u);
+                    start_pos_in_out_neighbor_lists[current_id] + std::max(out_degrees[current_id], (NInt) 1u);
         }
         // process dummy vertex
         assert(start_pos_in_out_neighbor_lists[numOfVertices] == numOfEdges + deadend_vertices.size());
@@ -244,21 +244,21 @@ public:
         start_pos_in_out_neighbor_lists[numOfVertices + 1] = start_pos_in_out_neighbor_lists[numOfVertices];
 
         // compute the positions
-        std::vector<VertexIdType> out_positions_to_fill(start_pos_in_out_neighbor_lists.begin(),
+        IntVector out_positions_to_fill(start_pos_in_out_neighbor_lists.begin(),
                                                         start_pos_in_out_neighbor_lists.end());
         // fill the edge list
         out_neighbors_lists.clear();
         out_neighbors_lists.resize(numOfEdges + num_deadend_vertices + degree_max, 0);
-        VertexIdType edges_processed = 0;
-        VertexIdType msg_gap = std::max((VertexIdType) 1u, numOfEdges / 10);
-        std::vector<std::pair<VertexIdType, VertexIdType>> position_pair;
+        NInt edges_processed = 0;
+        NInt msg_gap = std::max((NInt) 1u, numOfEdges / 10);
+        std::vector<std::pair<NInt, NInt>> position_pair;
         position_pair.reserve(numOfEdges);
         for (auto &edge : edges) {
-            const VertexIdType &from_id = edge.from_id;
-            const VertexIdType &to_id = edge.to_id;
+            const NInt &from_id = edge.from_id;
+            const NInt &to_id = edge.to_id;
             // remove self loop
             if (from_id != to_id) {
-                VertexIdType &out_position = out_positions_to_fill[from_id];
+                NInt &out_position = out_positions_to_fill[from_id];
                 assert(out_position < out_positions_to_fill[from_id + 1]);
                 out_neighbors_lists[out_position] = to_id;
                 position_pair.emplace_back(to_id, out_position);
@@ -273,7 +273,7 @@ public:
         MSG(edges_processed);
 
         // use reverse position
-        std::vector<VertexIdType> in_positions_to_fill(start_pos_in_appearance_pos_lists.begin(),
+        IntVector in_positions_to_fill(start_pos_in_appearance_pos_lists.begin(),
                                                        start_pos_in_appearance_pos_lists.end());
         in_positions_to_fill[numOfVertices] = numOfEdges;
         const double time_sort_start = getCurrentTime();
@@ -282,11 +282,11 @@ public:
 //        MSG(time_sort_end - time_sort_start);
         appearance_pos_lists.clear();
         appearance_pos_lists.resize(numOfEdges + num_deadend_vertices + degree_max, 0);
-        VertexIdType in_pos_pair = 0;
+        NInt in_pos_pair = 0;
         for (const auto &pair : position_pair) {
-            const VertexIdType &to_id = pair.first;
-            const VertexIdType &pos = pair.second;
-            VertexIdType &in_position = in_positions_to_fill[to_id];
+            const NInt &to_id = pair.first;
+            const NInt &pos = pair.second;
+            NInt &in_position = in_positions_to_fill[to_id];
             assert(in_position < in_positions_to_fill[to_id + 1]);
             appearance_pos_lists[in_position] = pos;
             ++in_position;
@@ -296,7 +296,7 @@ public:
         }
 
         // fill the dummy ids
-        for (const VertexIdType &id : deadend_vertices) {
+        for (const NInt &id : deadend_vertices) {
             out_neighbors_lists[out_positions_to_fill[id]++] = dummy_id;
         }
         assert(get_neighbor_list_start_pos(get_dummy_id()) ==
@@ -308,49 +308,49 @@ public:
 
     void show() const {
         // we need to show the dummy
-        const VertexIdType num_to_show = std::min(numOfVertices + 1, (VertexIdType) 50u);
+        const NInt num_to_show = std::min(numOfVertices + 1, (NInt) 50u);
         // show the first elements
         show_vector("The Out Degrees of The Vertices:",
-                    std::vector<VertexIdType>(out_degrees.data(), out_degrees.data() + num_to_show));
+                    IntVector(out_degrees.data(), out_degrees.data() + num_to_show));
         show_vector("The Start Positions of The Vertices in Out Neighbor Lists:",
-                    std::vector<VertexIdType>(start_pos_in_out_neighbor_lists.data(),
+                    IntVector(start_pos_in_out_neighbor_lists.data(),
                                               start_pos_in_out_neighbor_lists.data() + num_to_show));
         show_vector("The In Degrees of The Vertices:",
-                    std::vector<VertexIdType>(in_degrees.data(), in_degrees.data() + num_to_show));
+                    IntVector(in_degrees.data(), in_degrees.data() + num_to_show));
         show_vector("The Start Positions of The Vertices in Appearance List:",
-                    std::vector<VertexIdType>(start_pos_in_appearance_pos_lists.data(),
+                    IntVector(start_pos_in_appearance_pos_lists.data(),
                                               start_pos_in_appearance_pos_lists.data() + num_to_show));
         // assume that the number of vertices >= the number of edges; otherwise, there is a potential bug here.
         show_vector("Out Neighbor Lists:",
-                    std::vector<VertexIdType>(out_neighbors_lists.data(),
+                    IntVector(out_neighbors_lists.data(),
                                               out_neighbors_lists.data() +
-                                              std::min(numOfEdges + num_deadend_vertices, (VertexIdType) 50u)));
+                                              std::min(numOfEdges + num_deadend_vertices, (NInt) 50u)));
         show_vector("The Appearance Positions of Vertices in the Out Neighbor Lists:",
-                    std::vector<VertexIdType>(appearance_pos_lists.data(),
-                                              appearance_pos_lists.data() + std::min(numOfEdges, (VertexIdType) 50u)));
+                    IntVector(appearance_pos_lists.data(),
+                                              appearance_pos_lists.data() + std::min(numOfEdges, (NInt) 50u)));
 //        show_vector("The adj list of the middel vertex", matrix[numOfVertices / 2]);
         printf("The position the id appears in outNeighbor List:\n");
-        for (VertexIdType id = 0; id < numOfVertices; ++id) {
-            const VertexIdType &idx_start = start_pos_in_appearance_pos_lists[id];
-            const VertexIdType &idx_end = start_pos_in_appearance_pos_lists[id + 1];
+        for (NInt id = 0; id < numOfVertices; ++id) {
+            const NInt &idx_start = start_pos_in_appearance_pos_lists[id];
+            const NInt &idx_end = start_pos_in_appearance_pos_lists[id + 1];
             printf("Id:%" IDFMT ";\tPositions: ", id);
-            for (VertexIdType index = idx_start; index < idx_end; ++index) {
+            for (NInt index = idx_start; index < idx_end; ++index) {
                 printf("%" IDFMT ", ", appearance_pos_lists[index]);
             }
             printf("\n");
         }
         show_vector("Dead End Vertices List:",
-                    std::vector<VertexIdType>(deadend_vertices.data(),
+                    IntVector(deadend_vertices.data(),
                                               deadend_vertices.data() +
-                                              std::min(num_deadend_vertices, (VertexIdType) 50u)));
+                                              std::min(num_deadend_vertices, (NInt) 50u)));
         printf("\n%s\n", std::string(80, '-').c_str());
     }
 };
 
 
 class CleanGraph {
-    VertexIdType numOfVertices = 0;
-    EdgeSizeType numOfEdges = 0;
+    NInt numOfVertices = 0;
+    NInt numOfEdges = 0;
 public:
 
     void clean_graph(const std::string &_input_file,
@@ -384,7 +384,7 @@ public:
         size_t num_lines = 0;
         // process the first line
         {
-            VertexIdType fromId, toID;
+            NInt fromId, toID;
             ++num_lines;
             size_t end = 0;
             fromId = std::stoul(line, &end);
@@ -393,7 +393,7 @@ public:
             edges.emplace_back(fromId, toID);
         }
         // read the edges
-        for (VertexIdType fromId, toID; inf >> fromId >> toID;) {
+        for (NInt fromId, toID; inf >> fromId >> toID;) {
             edges.emplace_back(fromId, toID);
             if (++num_lines % 5000000 == 0) { printf("%zu Valid Lines Read.\n", num_lines); }
         }
@@ -415,23 +415,23 @@ public:
             id_min = std::min(id_min, (size_t) std::min(pair.from_id, pair.to_id));
         }
         printf("Minimum ID: %zu, Maximum ID: %zu\n", id_min, id_max);
-        if (id_max >= std::numeric_limits<uint64_t>::max()) {
-            printf("Warning: Change VertexIdType First.\n");
+        if (id_max >= std::numeric_limits<NInt>::max()) {
+            printf("Warning: Change NInt Type First.\n");
             exit(1);
         }
-        const VertexIdType one_plus_id_max = id_max + 1;
-        std::vector<VertexIdType> out_degree(one_plus_id_max, 0);
-        std::vector<VertexIdType> in_degree(one_plus_id_max, 0);
+        const NInt one_plus_id_max = id_max + 1;
+        IntVector out_degree(one_plus_id_max, 0);
+        IntVector in_degree(one_plus_id_max, 0);
         // compute the degrees.
         for (const auto &edge : edges) {
             ++out_degree[edge.from_id];
             ++in_degree[edge.to_id];
         }
         // count the number of dead-end vertices
-        VertexIdType original_dead_end_num = 0;
-        VertexIdType num_isolated_points = 0;
-        VertexIdType max_degree = 0;
-        for (VertexIdType id = 0; id < one_plus_id_max; ++id) {
+        NInt original_dead_end_num = 0;
+        NInt num_isolated_points = 0;
+        NInt max_degree = 0;
+        for (NInt id = 0; id < one_plus_id_max; ++id) {
             if (out_degree[id] == 0) {
                 ++original_dead_end_num;
                 if (in_degree[id] == 0) {
