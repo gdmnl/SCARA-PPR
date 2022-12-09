@@ -132,19 +132,27 @@ output_feature(const std::vector<float> &out_matrix, const std::string &_out_pat
 
 
 inline size_t
-load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path){
-    std::ifstream query_file(query_path);
-    if (query_file.good() == false) {
-        printf("File Not Exists.\n");
-        exit(1);
+load_query(std::vector<VertexIdType> &Vt_nodes, std::string query_path, const VertexIdType &V_num){
+    // By default use all nodes
+    if (query_path.empty()) {
+        for (VertexIdType sid = 0; sid < V_num; sid++) {
+            Vt_nodes.emplace_back(sid);
+        }
+    } else {
+        std::ifstream query_file(query_path);
+        if (query_file.good() == false) {
+            printf("File Not Exists.\n");
+            exit(1);
+        }
+        for (VertexIdType sid; (query_file >> sid);) {
+            Vt_nodes.emplace_back(sid);
+        }
+        if (Vt_nodes.empty()) {
+            printf("Error! Empty File\n");
+        }
+        query_file.close();
     }
-    for (VertexIdType sid; (query_file >> sid);) {
-        Vt_nodes.emplace_back(sid);
-    }
-    if (Vt_nodes.empty()) {
-        printf("Error! Empty File\n");
-    }
-    query_file.close();
+
     std::cout << "Query size: " << Vt_nodes.size() << std::endl;
     return Vt_nodes.size();
 }

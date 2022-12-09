@@ -51,9 +51,9 @@ public:
             lower_threshold(1.0 / _graph.getNumOfVertices()),
             graph(_graph),
             param(_param) {
-        Vt_num = load_query(Vt_nodes, param.query_file);
+        Vt_num = load_query(Vt_nodes, param.query_file, V_num);
         feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file);
-        // ! Cannot allocate memory for large size
+        // ! Cannot allocate memory for large size (45352051*128)
         out_matrix.allocate(feat_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
         // Perform cached random walk
