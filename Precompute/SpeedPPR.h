@@ -1,4 +1,7 @@
-// Ref: https://github.com/wuhao-wu-jiang/Personalized-PageRank
+/*
+  SpeedPPR implementation of generalized PPR
+  Ref: https://github.com/wuhao-wu-jiang/Personalized-PageRank
+*/
 #ifndef SCARA_SPEEDPPR_H
 #define SCARA_SPEEDPPR_H
 
@@ -11,8 +14,8 @@
 #include <unordered_map>
 #include <sstream>
 #include "BasicDefinition.h"
+#include "HelperFunctions.h"
 #include "Graph.h"
-#include "MyType.h"
 #ifdef ENABLE_RW
 #include "BatchRandomWalk.h"
 #endif
@@ -34,7 +37,7 @@ public:
         }
 
     protected:
-        MyQueue active_vertices;
+        VertexQueue active_vertices;
         std::vector<bool> is_active;
         std::vector<FLT> pi;
         std::vector<FLT> residuals;

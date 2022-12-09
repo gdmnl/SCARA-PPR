@@ -1,3 +1,7 @@
+/*
+  Interface and IO
+  Author: nyLiao
+*/
 #ifndef SCARA_HELPERFUNCTIONS_H
 #define SCARA_HELPERFUNCTIONS_H
 
@@ -10,7 +14,6 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
-#include <iterator>
 #include <chrono>
 #include <fstream>
 #include <unistd.h>
@@ -55,14 +58,6 @@ extern Param param;
 extern Param parseArgs(int nargs, char **args);
 
 // ==================== IO
-template<class FLT>
-inline FLT vector_L1(std::vector<FLT> Vec){
-    FLT sum = 0;
-    for(FLT a : Vec)
-        sum += fabs(a);
-    return sum;
-}
-
 /*
 Assign vector value from _data to _target:
     If _data.size == _target.size: allow swap() for fast assign if _data no longer used
@@ -90,35 +85,6 @@ inline void propagate_vector(std::vector<FLT> &_data, std::vector<FLT> &_target,
             _target[_mapping[j]] = _data[j];
         }
     }
-}
-
-template<class T>
-inline void show_vector(const std::string &_header, const std::vector<T> &_vec) {
-    if (_vec.empty()) {
-        cout << "Empty Vector." << endl;
-    } else {
-        cout << endl << _header;
-        bool identical = true;
-        const T &elem = _vec.front();
-        std::for_each(_vec.begin(), _vec.end(), [&](const T &e) { identical &= (e == elem); });
-        if (identical) {
-            cout << "\tSize of the Vector: " << _vec.size() << "\t Value of Each Element: " << elem;
-        } else {
-            cout << endl;
-            std::copy(begin(_vec), end(_vec), std::ostream_iterator<T>(cout, "\t"));
-        }
-        cout << endl;
-    }
-}
-
-template<class T>
-inline void output_vector(std::vector<T> Vec, std::string filename){
-    std::ofstream file;
-    file.open(filename, std::ios_base::app);
-    for(auto a : Vec)
-        file<<a<<"\t";
-    file << "\n";
-    file.close();
 }
 
 inline void output_feature(const FltVector &out_matrix, const std::string &_out_path,

@@ -4,8 +4,6 @@ save
 save/*
 backup/*
 run/*
-data
-data/*
 */result/
 !**/Makefile
 

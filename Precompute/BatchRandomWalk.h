@@ -1,3 +1,7 @@
+/*
+  Cached Random Walk in Batch
+  Author: nyLiao
+*/
 #ifndef SCARA_BATCHRANDOMWALK_H
 #define SCARA_BATCHRANDOMWALK_H
 
@@ -8,8 +12,8 @@
 #include <stack>
 #include <queue>
 #include "BasicDefinition.h"
+#include "HelperFunctions.h"
 #include "Graph.h"
-#include "MyType.h"
 #include "fastPRNG.h"
 
 
@@ -165,10 +169,6 @@ public:
         }
         const auto end = getCurrentTime();
         // printf("Time Used For Loading Cache : %.2f\n", end - start);
-    }
-
-    void show() {
-        show_vector("The cache walk vector", walks);
     }
 
     inline const NInt &get_zero_hop_start_index(const NInt &_vid) const {

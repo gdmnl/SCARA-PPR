@@ -1,3 +1,7 @@
+/*
+  Implementation of embedding computation from feature
+  Author: nyLiao
+*/
 #include <thread>
 #include "Graph.h"
 #include "SpeedPPR.h"

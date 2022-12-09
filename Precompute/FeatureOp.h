@@ -1,3 +1,7 @@
+/*
+  Feature calculation
+  Author: nyLiao
+*/
 #ifndef SCARA_FEATUREOP_H
 #define SCARA_FEATUREOP_H
 
@@ -5,7 +9,18 @@
 #include <iostream>
 #include <cmath>
 #include "BasicDefinition.h"
+#include "HelperFunctions.h"
 #include "MyType.h"
+
+
+// ==================== Basic
+template<class FLT>
+inline FLT vector_L1(std::vector<FLT> Vec){
+    FLT sum = 0;
+    for(FLT a : Vec)
+        sum += fabs(a);
+    return sum;
+}
 
 // ==================== Vector measurement
 template <class FLT>

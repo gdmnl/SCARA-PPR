@@ -1,73 +1,13 @@
+/*
+  Matrix algebra computation
+  Author: nyLiao
+*/
 #ifndef SCARA_MYTYPE_H
 #define SCARA_MYTYPE_H
 
-#include <vector>
 #include <cmath>
-#include <iostream>
 #include <cassert>
 #include "BasicDefinition.h"
-
-class MyQueue {
-private:
-    const NInt mask;
-    IntVector queue;
-    NInt num = 0;
-    NInt idx_front = 0;
-    NInt idx_last_plus_one = 0;
-private:
-    static inline NInt compute_queue_size(const NInt &_numOfVertices) {
-        return (1u) << (uint32_t) ceil(log2(_numOfVertices + 2u));
-    }
-
-public:
-    explicit MyQueue(const NInt &_numOfVertices) :
-            mask(compute_queue_size(_numOfVertices) - 1),
-            queue(mask + 2u, 0) {}
-
-    inline void clear() {
-        idx_front = 0;
-        idx_last_plus_one = 0;
-        num = 0;
-    }
-
-
-    inline const NInt &size() const {
-        return num;
-    }
-
-    inline const NInt &front() const {
-        return queue[idx_front];
-    }
-
-    inline void pop() {
-        --num;
-        ++idx_front;
-        idx_front &= mask;
-    }
-
-    inline void push(const NInt &_elem) {
-        ++num;
-        queue[idx_last_plus_one] = _elem;
-        ++idx_last_plus_one;
-        idx_last_plus_one &= mask;
-    }
-
-    inline bool empty() const {
-        return idx_last_plus_one == idx_front;
-    }
-};
-
-struct FwdPushStructure {
-    // reserve one slot for the dummy vertex
-    MyQueue active_vertices;
-    // reserve one slot for the dummy vertex
-    std::vector<bool> is_active;
-
-    explicit FwdPushStructure(const NInt &numOfVertices) :
-            active_vertices(numOfVertices + 1),
-            is_active(numOfVertices + 1, false) {}
-};
-
 
 /*
  * Matrix in vector of vectors allow for fast row assign. Directly assign by std::vector.swap is 2x faster

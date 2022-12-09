@@ -1,8 +1,13 @@
+/*
+  SpeedPPR implementation of graph processing
+  Ref: https://github.com/wuhao-wu-jiang/Personalized-PageRank
+*/
 #ifndef SCARA_GRAPH_H
 #define SCARA_GRAPH_H
 
 #include <string>
 #include <vector>
+#include <iterator>
 #include <algorithm>
 #include <cassert>
 #include <limits>
@@ -12,6 +17,25 @@
 #include "BasicDefinition.h"
 #include "HelperFunctions.h"
 
+
+template<class T>
+inline void show_vector(const std::string &_header, const std::vector<T> &_vec) {
+    if (_vec.empty()) {
+        cout << "Empty Vector." << endl;
+    } else {
+        cout << endl << _header;
+        bool identical = true;
+        const T &elem = _vec.front();
+        std::for_each(_vec.begin(), _vec.end(), [&](const T &e) { identical &= (e == elem); });
+        if (identical) {
+            cout << "\tSize of the Vector: " << _vec.size() << "\t Value of Each Element: " << elem;
+        } else {
+            cout << endl;
+            std::copy(begin(_vec), end(_vec), std::ostream_iterator<T>(cout, "\t"));
+        }
+        cout << endl;
+    }
+}
 
 class Graph {
 
@@ -170,19 +194,19 @@ public:
                 exit(1);
             }
         }
-        const auto start = getCurrentTime();
+        // const auto start = getCurrentTime();
         // create temporary graph
         std::vector<Edge> edges(numOfEdges);
         if (std::FILE *f = std::fopen(_graph_file.c_str(), "rb")) {
             size_t rtn = std::fread(edges.data(), sizeof edges[0], edges.size(), f);
-            printf("Returned Value of fread: %zu\n", rtn);
+            printf("Edge from fread: %zu\n", rtn);
             std::fclose(f);
         } else {
-            printf("Graph::read; File Not Exists.\n");
+            printf("Graph::read_binary; File Not Exists.\n");
             cout << _graph_file << endl;
             exit(1);
         }
-        const auto end = getCurrentTime();
+        // const auto end = getCurrentTime();
         // printf("Time Used For Loading BINARY : %.2f\n", end - start);
 
         // read the edges
@@ -221,7 +245,6 @@ public:
             degree_max = std::max(degree_max, out_degrees[i]);
         }
         num_deadend_vertices = deadend_vertices.size();
-        printf("The number of dead end vertices:%" IDFMT "\n", num_deadend_vertices);
 
         // process pos_list list
         start_pos_in_appearance_pos_lists.clear();
@@ -270,7 +293,7 @@ public:
             }
         }
         edges.clear();
-        MSG(edges_processed);
+        printf("Edges processed: %" IDFMT "\n", edges_processed);
 
         // use reverse position
         IntVector in_positions_to_fill(start_pos_in_appearance_pos_lists.begin(),
@@ -295,6 +318,8 @@ public:
             // }
         }
 
+        printf("Vertices total:    %" IDFMT "\n", numOfVertices);
+        printf("Vertices dead end: %" IDFMT "\n", num_deadend_vertices);
         // fill the dummy ids
         for (const NInt &id : deadend_vertices) {
             out_neighbors_lists[out_positions_to_fill[id]++] = dummy_id;

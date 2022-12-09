@@ -1,11 +1,17 @@
+/*
+  Type and class definitions
+  Author: nyLiao
+*/
 #ifndef SCARA_BASICDEFINITION_H
 #define SCARA_BASICDEFINITION_H
 
-// #ifndef ENABLE_RW
-// #define ENABLE_RW
-// #endif
+#ifndef ENABLE_RW
+#define ENABLE_RW
+#endif
 
 #include <queue>
+#include <vector>
+#include <cmath>
 
 using std::cout;
 using std::endl;
@@ -53,6 +59,60 @@ struct Edge {
     bool operator<(const Edge &_edge) const {
         return from_id < _edge.from_id || (from_id == _edge.from_id && to_id < _edge.to_id);
     }
+};
+
+class VertexQueue {
+private:
+    const NInt mask;
+    IntVector queue;
+    NInt num = 0;
+    NInt idx_front = 0;
+    NInt idx_last_plus_one = 0;
+private:
+    static inline NInt compute_queue_size(const NInt &_numOfVertices) {
+        return (1u) << (uint32_t) ceil(log2(_numOfVertices + 2u));
+    }
+
+public:
+    explicit VertexQueue(const NInt &_numOfVertices) :
+            mask(compute_queue_size(_numOfVertices) - 1),
+            queue(mask + 2u, 0) {}
+
+    inline void clear() {
+        idx_front = 0;
+        idx_last_plus_one = 0;
+        num = 0;
+    }
+
+    inline const NInt &size() const { return num; }
+
+    inline const NInt &front() const { return queue[idx_front]; }
+
+    inline void pop() {
+        --num;
+        ++idx_front;
+        idx_front &= mask;
+    }
+
+    inline void push(const NInt &_elem) {
+        ++num;
+        queue[idx_last_plus_one] = _elem;
+        ++idx_last_plus_one;
+        idx_last_plus_one &= mask;
+    }
+
+    inline bool empty() const {
+        return idx_last_plus_one == idx_front;
+    }
+};
+
+struct FwdPushStructure {
+    VertexQueue active_vertices;        // reserve one slot for the dummy vertex
+    std::vector<bool> is_active;    // reserve one slot for the dummy vertex
+
+    explicit FwdPushStructure(const NInt &numOfVertices) :
+            active_vertices(numOfVertices + 1),
+            is_active(numOfVertices + 1, false) {}
 };
 
 #endif //SCARA_BASICDEFINITION_H
