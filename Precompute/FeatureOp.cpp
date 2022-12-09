@@ -53,6 +53,7 @@ public:
             param(_param) {
         Vt_num = load_query(Vt_nodes, param.query_file);
         feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file);
+        // ! Cannot allocate memory for large size
         out_matrix.allocate(feat_size, V_num);   // spt_size rows, V_num columns
         printf("Result size: %ld \n", out_matrix.size());
         // Perform cached random walk
@@ -307,7 +308,7 @@ public:
         // Calculate rest PPR
         std::vector<std::thread> threads;
 
-        double time_start = getCurrentTime();
+        time_start = getCurrentTime();
         for (VertexIdType thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
             VertexIdType thd_right = std::min(feat_size, thd_left + thd_size);
             VertexIdType tid = thd_left / thd_size;
@@ -334,7 +335,7 @@ public:
         total_time += getCurrentTime() - time_start;
         printf("Time Used on Base %.6f\n", total_time);
         // Calculate rest PPR
-        double time_start = getCurrentTime();
+        time_start = getCurrentTime();
         for (VertexIdType i = 0; i < feat_size; i++) {
             push_one_rest(i, 0, graph_structure, seed, raw_seed);
         }

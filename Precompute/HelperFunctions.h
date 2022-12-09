@@ -153,7 +153,6 @@ inline size_t
 load_feature(std::vector<VertexIdType> &Vt_nodes, MyMatrix &feature_matrix,
     std::string feature_path) {
     VertexIdType index = 0;
-    VertexIdType sumrow = 0;
     std::vector<unsigned long> shape;
     bool fortran_order;
     std::vector<float> arr_np;
@@ -170,14 +169,12 @@ load_feature(std::vector<VertexIdType> &Vt_nodes, MyMatrix &feature_matrix,
 
     // Save each node vector (of length F) to feature_matrix
     for (VertexIdType row = 0; row < nrows; row ++) {
-        if (sumrow + row == Vt_nodes[index]) {
+        if (row == Vt_nodes[index]) {
             index++;
             std::vector<float> feature_array(feature_data+row*ncols, feature_data+row*ncols+ncols);
-            feature_matrix.set_col(sumrow + row, feature_array);
+            feature_matrix.set_col(index, feature_array);
         }
     }
-    sumrow += nrows;
-    // std::cout << "  sumrow " << sumrow << " index " << index << std::endl;
 
     std::cout<<"Feature size: "<<feature_matrix.size()<<" "<<feature_matrix[0].size()<<std::endl;
     return feature_matrix.size();
