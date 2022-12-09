@@ -176,6 +176,7 @@ public:
                     for (uint32_t j = idx_start; j < idx_end; ++j) {
                         const NInt &nid = graph.getOutNeighbor(j);
                         residuals[nid] += increment;
+                        // TODO: why no threshold here (and similar places) ?
                         if (!is_active[nid]) {
                             active_vertices.push(nid);
                             is_active[nid] = true;
@@ -202,6 +203,7 @@ public:
         active_vertices.clear();
         std::fill(is_active.begin(), is_active.end(), false);
         for (NInt id = 0; id < numOfVertices; ++id) {
+            // TODO: add abs
             if (residuals[id] >= one_over_one_minus_alpha) {
                 active_vertices.push(id);
                 is_active[id] = true;
@@ -253,6 +255,7 @@ public:
 
         // compute bounds
         const FLT one_over_num_walks = (1.0f / num_walks);
+        // TODO: add abs
         const auto scale_factor = static_cast<FLT>(1.0 / (1.0 - residuals[numOfVertices] * one_over_num_walks
                                                                  - means[numOfVertices] * one_over_num_walks));
         const auto one_over_num_walks_x_scale_factor = one_over_num_walks * scale_factor;

@@ -297,7 +297,7 @@ public:
 
         // use reverse position
         IntVector in_positions_to_fill(start_pos_in_appearance_pos_lists.begin(),
-                                                       start_pos_in_appearance_pos_lists.end());
+                                       start_pos_in_appearance_pos_lists.end());
         in_positions_to_fill[numOfVertices] = numOfEdges;
         const double time_sort_start = getCurrentTime();
         std::sort(position_pair.begin(), position_pair.end(), std::less<>());

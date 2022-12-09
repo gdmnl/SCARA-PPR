@@ -7,6 +7,8 @@ set(CMAKE_CXX_FLAGS "-march=native -msse2 -msse -DHAVE_SSE2 -ffast-math -mfpmath
 #set(CMAKE_CXX_FLAGS "-march=native -ffast-math -use_fast_math -pthread -std=c++11 -O3 -DNDEBUG")
 #set(CMAKE_CXX_FLAGS "-march=native -ffast-math -use_fast_math -pthread -std=c++11")
 
+include_directories( "/usr/include/eigen3" )
+
 #add_executable(featpush main.cpp
 #    fastPRNG.h npy.hpp
 #    BasicDefinition.h Graph.h BatchRandomWalk.h

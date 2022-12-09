@@ -88,7 +88,7 @@ inline void propagate_vector(std::vector<FLT> &_data, std::vector<FLT> &_target,
 }
 
 inline void output_feature(const FltVector &out_matrix, const std::string &_out_path,
-               const unsigned long spt_size, const NInt &_node_num) {
+        const unsigned long spt_size, const NInt &_node_num) {
     // Save to .npy file
     std::array<long unsigned, 2> res_shape {{spt_size, _node_num}};
     npy::SaveArrayAsNumpy(_out_path, false, res_shape.size(), res_shape.data(), out_matrix);

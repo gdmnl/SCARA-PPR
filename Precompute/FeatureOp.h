@@ -8,10 +8,14 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <Eigen/Dense>
 #include "BasicDefinition.h"
 #include "HelperFunctions.h"
 #include "MyType.h"
 
+typedef Eigen::Matrix<ScoreFlt, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ScoreMatrix;
+typedef Eigen::Map<ScoreMatrix> ScoreMap;
+typedef Eigen::Ref<ScoreMatrix> ScoreRef;
 
 // ==================== Basic
 template<class FLT>
