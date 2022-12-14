@@ -27,14 +27,19 @@ public:
     template<class FLT>
     struct GStruct {
         std::vector<FLT> means;
+        double time_init;
+        double time_fp;
+        double time_it;
+        double time_rw;
 
         GStruct(const NInt &_numOfVertices) :
                 means(_numOfVertices + 2, 0),
                 active_vertices(_numOfVertices + 2),
                 is_active(_numOfVertices + 2, false),
                 pi(_numOfVertices + 2, 0),
-                residuals(_numOfVertices + 2, 0) {
-        }
+                residuals(_numOfVertices + 2, 0),
+                time_init(0), time_fp(0), time_it(0), time_rw(0)
+        {}
 
     protected:
         VertexQueue active_vertices;
@@ -272,6 +277,7 @@ public:
             const std::vector<FLT> &_seeds, const FLT _epsilon,
             const FLT _alpha, const FLT _lower_threshold,
             const FLT gamma = 1.0) {
+        double time_start = getCurrentTime();
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLT>(graph.getNumOfEdges() / (FLT) graph.getNumOfVertices());
         FLT time_scaling_factor = 1.0;
@@ -283,10 +289,17 @@ public:
         auto &pi = _gstruct.pi;
         auto &residuals = _gstruct.residuals;
         auto &means = _gstruct.means;
+        auto &time_init = _gstruct.time_init;
+        auto &time_fp = _gstruct.time_fp;
+        auto &time_it = _gstruct.time_it;
+        auto &time_rw = _gstruct.time_rw;
 
         std::fill(pi.begin(), pi.end(), 0);
         std::fill(residuals.begin(), residuals.end(), 0.0);
+        std::fill(is_active.begin(), is_active.end(), false);
+        active_vertices.clear();
 
+        // TODO: loop in Vt_nodes
         for(int i = 0; i < graph.getNumOfVertices(); i++){
             if(_seeds[i] != 0.0){
                 active_vertices.push(i);
@@ -294,7 +307,10 @@ public:
                 residuals[i] = _seeds[i] * num_walks;
             }
         }
+        time_init += getCurrentTime() - time_start;
 
+        // Forward Push
+        time_start = getCurrentTime();
         uint32_t num_active = 0;
         const FLT one_minus_alpha = 1.0 - _alpha;
         const NInt queue_threshold = (numOfVertices / avg_deg * 4);
@@ -341,7 +357,10 @@ public:
                 }
             }
         }
+        time_fp += getCurrentTime() - time_start;
 
+        // iter
+        time_start = getCurrentTime();
         num_active = active_vertices.size();
         const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
 
@@ -378,8 +397,10 @@ public:
                 }
             }
         }
+        time_it += getCurrentTime() - time_start;
 
         // random walks
+        time_start = getCurrentTime();
         means.swap(pi);
 
 #ifdef ENABLE_RW
@@ -448,7 +469,7 @@ public:
         for (NInt id = 0; id < numOfVertices; ++id) {
             FLT &residual = residuals[id];
             if (residual != 0) {
-                const FLT alpha_residual = _alpha * residuals[id];
+                const FLT alpha_residual = _alpha * residual;
                 means[id] += alpha_residual;
                 residuals[id] -= alpha_residual;
             }
@@ -457,13 +478,14 @@ public:
         // compute bounds
         const FLT one_over_num_walks = (1.0f / num_walks);
         const auto scale_factor = static_cast<FLT>(1.0 / (1.0 - residuals[numOfVertices] * one_over_num_walks
-                                                                 - means[numOfVertices] * one_over_num_walks));
+                                                              -     means[numOfVertices] * one_over_num_walks));
         const auto one_over_num_walks_x_scale_factor = one_over_num_walks * scale_factor;
         for (auto &mean :means) {
             mean *= one_over_num_walks_x_scale_factor;
         }
 #endif
         means[numOfVertices] = 0;
+        time_rw += getCurrentTime() - time_start;
     }
 };
 

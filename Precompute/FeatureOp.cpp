@@ -18,8 +18,9 @@ protected:
     Param &param;
     Graph &graph;
     class SpeedPPR ppr;
-    IntVector Vt_nodes; // list of queried nodes
-    MyMatrix feature_matrix;
+    IntVector   Vt_nodes;       // list of queried nodes
+    My2DVector  feat_v2d;       // feature matrix data
+    MyMatrix    feat_matrix;    // feature matrix mapped as vec of vec
 #ifdef ENABLE_RW
     WalkCache walkCache;
 #endif
@@ -39,8 +40,10 @@ public:
     std::vector<double> time_read;
     std::vector<double> time_write;
     std::vector<double> time_push;
-
-    My2DVector out_matrix;
+    std::vector<double> time_init;
+    std::vector<double> time_fp;
+    std::vector<double> time_it;
+    std::vector<double> time_rw;
 
 public:
 
@@ -56,12 +59,13 @@ public:
             graph(_graph),
             param(_param) {
         Vt_num = load_query(Vt_nodes, param.query_file, V_num);
-        feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file);
-        // ! Cannot allocate memory for large size (45352051*128)
-        out_matrix.allocate(feat_size, V_num);   // spt_size rows, V_num columns
-        printf("Result size: %ld \n", out_matrix.size());
-        // Perform cached random walk
+        feat_v2d.load_npy(param.feature_file);
+        feat_size = feat_v2d.nrows();
+        feat_matrix.set_size(feat_size, V_num);
+        feat_matrix.from_V2D(feat_v2d, Vt_nodes);
+        feat_v2d.clear();
 #ifdef ENABLE_RW
+        // Perform cached random walk
         if (param.index) {
             graph.set_dummy_neighbor(graph.get_dummy_id());
             walkCache.generate();
@@ -75,47 +79,49 @@ public:
         time_read.resize(thread_num, 0);
         time_write.resize(thread_num, 0);
         time_push.resize(thread_num, 0);
+        time_init.resize(thread_num, 0);
+        time_fp.resize(thread_num, 0);
+        time_it.resize(thread_num, 0);
+        time_rw.resize(thread_num, 0);
     }
 
-    void push_one(const NInt i, const NInt tid,
-            SpeedPPR::GStruct<ScoreFlt> &_gstruct, FltVector &_seed) {
+    void push_one(const NInt i, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
         // printf("ID: %4" IDFMT "\n", i);
         double time_start = getCurrentTime();
-        propagate_vector(feature_matrix[i], _seed, Vt_nodes, V_num, true);
-        time_read[tid] += getCurrentTime() - time_start;
-
-        time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, _seed, epsilon, alpha, lower_threshold, walkCache);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], epsilon, alpha, lower_threshold, walkCache);
         else
-            ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], epsilon, alpha, lower_threshold);
 #else
-        ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], epsilon, alpha, lower_threshold);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
-        // Save embedding vector of feature i on all nodes to out_matrix
+        // Save embedding vector of feature i on all nodes to feat_matrix in place
         time_start = getCurrentTime();
-        std::swap_ranges(_gstruct.means.begin(), _gstruct.means.end()-2,
-                         out_matrix[i].begin());
+        feat_matrix[i].swap(_gstruct.means);
         time_write[tid] += getCurrentTime() - time_start;
     }
 
     void push_thread(const NInt feat_left, const NInt feat_right, const NInt tid) {
         // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
         SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
-        FltVector seed;
         for (NInt i = feat_left; i < feat_right; i++) {
-            push_one(i, tid, gstruct, seed);
+            push_one(i, tid, gstruct);
         }
+        time_init[tid] = gstruct.time_init;
+        time_fp[tid]   = gstruct.time_fp;
+        time_it[tid]   = gstruct.time_it;
+        time_rw[tid]   = gstruct.time_rw;
     }
 
     void save_output(const NInt feat_left, const NInt feat_right) {
         if (param.output_estimations) {
             std::stringstream res_file;
             res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
-            output_feature(out_matrix.get_data(), res_file.str(), feat_right - feat_left, V_num);
+            feat_matrix.to_V2D(feat_v2d);
+            feat_v2d.save_npy(res_file.str());
         }
     }
 
@@ -123,7 +129,11 @@ public:
         printf("Mem: %ld MB\n", get_proc_memory()/1000);
         printf("Total Time    : %.6f, Average: %.12f / node-thread\n", total_time, total_time * thread_num / feat_size);
         printf("Push  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
-        printf("Read  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
+        printf("  Init     Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);
+        printf("  FwdPush  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_fp), vector_L1(time_fp) / thread_num);
+        printf("  PIter    Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_it), vector_L1(time_it) / thread_num);
+        printf("  RW       Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_rw), vector_L1(time_rw) / thread_num);
+        // printf("Read  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
         printf("Write Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_write), vector_L1(time_write) / thread_num);
     }
 
@@ -150,7 +160,7 @@ public:
         SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
         FltVector seed;
         for (NInt i = 0; i < feat_size; i++) {
-            push_one(i, 0, gstruct, seed);
+            push_one(i, 0, gstruct);
         }
         total_time += getCurrentTime() - time_start;
         save_output(0, feat_size);
@@ -158,6 +168,7 @@ public:
 
 };
 
+/*
 class Base_reuse : public Base {
 
 public:
@@ -374,3 +385,4 @@ public:
     }
 
 };
+*/

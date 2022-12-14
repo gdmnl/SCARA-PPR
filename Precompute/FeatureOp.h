@@ -8,14 +8,10 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
-#include <Eigen/Dense>
 #include "BasicDefinition.h"
 #include "HelperFunctions.h"
 #include "MyType.h"
 
-typedef Eigen::Matrix<ScoreFlt, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ScoreMatrix;
-typedef Eigen::Map<ScoreMatrix> ScoreMap;
-typedef Eigen::Ref<ScoreMatrix> ScoreRef;
 
 // ==================== Basic
 template<class FLT>
@@ -132,12 +128,12 @@ inline FLT calc_L2_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
 inline IntVector select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
     NInt base_size = base_matrix.nrows();
     IntVector base_idx(base_size, 0);                                          // index of base features
-    std::vector<IdScorePair<ScoreFlt>> min_counter(feature_matrix.size(), {0, 0.0});  // (min base id, min norm) for each feature
+    std::vector<IdScorePair<ScoreFlt>> min_counter(feature_matrix.nrows(), {0, 0.0});  // (min base id, min norm) for each feature
     // Find minimum distance feature for each feature
-    for (NInt i = 0; i < feature_matrix.size(); i++) {
-        ScoreFlt dis_min = 4.0 * feature_matrix.size();
+    for (NInt i = 0; i < feature_matrix.nrows(); i++) {
+        ScoreFlt dis_min = 4.0 * feature_matrix.nrows();
         NInt idx_min = -1;
-        for (NInt j = 0; j < feature_matrix.size(); j++) {
+        for (NInt j = 0; j < feature_matrix.nrows(); j++) {
             if (i != j) {
                 ScoreFlt dis = calc_L2_distance(feature_matrix[i], feature_matrix[j]);
                 if (dis_min > dis) {
@@ -147,7 +143,7 @@ inline IntVector select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
             }
         }
         // printf("id: %4d, dis: %.8f, tar: %4d\n", i, dis_min, idx_min);
-        if (idx_min < 0 || idx_min > feature_matrix.size()) continue;
+        if (idx_min < 0 || idx_min > feature_matrix.nrows()) continue;
         min_counter[idx_min].id = idx_min;
         // Add weight for counter, distance closer to 1 is smaller weight
         min_counter[idx_min].score += fabs(1 - dis_min);
@@ -166,11 +162,11 @@ inline IntVector select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
 
 template <class FLT>
 inline std::vector<FLT> reuse_weight(std::vector<FLT> &raw_seed, MyMatrix &base_matrix) {
-    std::vector<FLT> base_weight(base_matrix.size(), 0.0);
+    std::vector<FLT> base_weight(base_matrix.nrows(), 0.0);
     for (FLT delta = 1; delta <= 16; delta *= 2) {
-        FLT dis_min = base_matrix.size();
+        FLT dis_min = base_matrix.nrows();
         NInt idx_min = 0;
-        for (NInt j = 0; j < base_matrix.size(); j++) {
+        for (NInt j = 0; j < base_matrix.nrows(); j++) {
             FLT dis = calc_L2_distance(raw_seed, base_matrix[j]);
             if (dis_min > dis) {
                 dis_min = dis;
