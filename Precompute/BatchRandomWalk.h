@@ -1,3 +1,7 @@
+/*
+  Cached Random Walk in Batch
+  Author: nyLiao
+*/
 #ifndef SCARA_BATCHRANDOMWALK_H
 #define SCARA_BATCHRANDOMWALK_H
 
@@ -8,8 +12,8 @@
 #include <stack>
 #include <queue>
 #include "BasicDefinition.h"
+#include "HelperFunctions.h"
 #include "Graph.h"
-#include "MyType.h"
 #include "fastPRNG.h"
 
 
@@ -43,24 +47,24 @@ extern XoshiroGenerator fRNG;
 extern XoshiroGenerator init_rng(uint64_t seed);
 
 
-template<class FLOAT_TYPE>
+template<class FLT>
 class Alias {
 private:
     const unsigned int size;
-    const std::vector<VertexIdType> &first;
-    std::vector<VertexIdType> second;
-    std::vector<FLOAT_TYPE> probability;
+    const IntVector &first;
+    IntVector second;
+    std::vector<FLT> probability;
 public:
-    Alias(const std::vector<VertexIdType> &_active_ids, const std::vector<FLOAT_TYPE> &_active_residuals) :
+    Alias(const IntVector &_active_ids, const std::vector<FLT> &_active_residuals) :
             size(_active_ids.size()),
             first(_active_ids),
             second(_active_ids.size(), 0),
             probability(_active_residuals) {
-        const FLOAT_TYPE sum = std::accumulate(_active_residuals.begin(), _active_residuals.end(), 0.0);
-        std::stack<VertexIdType, std::vector<VertexIdType >> small;
-        std::stack<VertexIdType, std::vector<VertexIdType >> big;
-        const FLOAT_TYPE size_over_sum = size / sum;
-        for (VertexIdType id = 0; id < size; ++id) {
+        const FLT sum = std::accumulate(_active_residuals.begin(), _active_residuals.end(), 0.0);
+        std::stack<NInt, std::vector<NInt >> small;
+        std::stack<NInt, std::vector<NInt >> big;
+        const FLT size_over_sum = size / sum;
+        for (NInt id = 0; id < size; ++id) {
             probability[id] *= size_over_sum;
             if (probability[id] > 1) {
                 big.push(id);
@@ -69,9 +73,9 @@ public:
             }
         }
         while (!small.empty() && !big.empty()) {
-            const VertexIdType small_id = small.top();
+            const NInt small_id = small.top();
             small.pop();
-            const VertexIdType big_id = big.top();
+            const NInt big_id = big.top();
             second[small_id] = first[big_id];
             probability[big_id] -= (1 - probability[small_id]);
             if (probability[big_id] < 1) {
@@ -81,7 +85,7 @@ public:
         }
     }
 
-    inline VertexIdType generate_random_id() const {
+    inline NInt generate_random_id() const {
         const unsigned int bucket_id = fRNG.uniform_int(size);
         return fRNG.bias_coin_is_head(probability[bucket_id]) ? first[bucket_id] : second[bucket_id];
     }
@@ -92,8 +96,8 @@ public:
 class WalkCache {
 private:
     const Graph &graph;
-    std::vector<VertexIdType> walks;
-    std::vector<VertexIdType> start_indices;
+    IntVector walks;
+    IntVector start_indices;
 
 public:
 
@@ -105,23 +109,23 @@ public:
 
     void generate() {
         double time_start = getCurrentTime();
-        const VertexIdType num_vertices = graph.getNumOfVertices();
-        for (VertexIdType sid = 0, index = 0; sid < num_vertices; ++sid) {
-            // if (sid % 500000 == 0) { std::cout << sid << " vertices processed.\n"; }
+        const NInt num_vertices = graph.getNumOfVertices();
+        for (NInt sid = 0, index = 0; sid < num_vertices; ++sid) {
+            // if (sid % 500000 == 0) { cout << sid << " vertices processed.\n"; }
             start_indices[sid] = index;
-            const VertexIdType &sid_idx_start = graph.get_neighbor_list_start_pos(sid);
-            const VertexIdType &sid_idx_end = graph.get_neighbor_list_start_pos(sid + 1);
-            const VertexIdType sid_degree = sid_idx_end - sid_idx_start;
+            const NInt &sid_idx_start = graph.get_neighbor_list_start_pos(sid);
+            const NInt &sid_idx_end = graph.get_neighbor_list_start_pos(sid + 1);
+            const NInt sid_degree = sid_idx_end - sid_idx_start;
             for (uint32_t j = 0; j < sid_degree; ++j) {
-                const VertexIdType sid_shift = fRNG.uniform_int(sid_degree);
-                VertexIdType current_id = graph.getOutNeighbor(sid_idx_start + sid_shift);
+                const NInt sid_shift = fRNG.uniform_int(sid_degree);
+                NInt current_id = graph.getOutNeighbor(sid_idx_start + sid_shift);
                 while (fRNG.bias_coin_is_tail(graph.get_alpha())) {
                     // TODO: stop at L-hop
-                    const VertexIdType &idx_start = graph.get_neighbor_list_start_pos(current_id);
-                    const VertexIdType &idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
-                    const VertexIdType degree = idx_end - idx_start;
-                    const VertexIdType shift = fRNG.uniform_int(degree);
-                    const VertexIdType nid = graph.getOutNeighbor(idx_start + shift);
+                    const NInt &idx_start = graph.get_neighbor_list_start_pos(current_id);
+                    const NInt &idx_end = graph.get_neighbor_list_start_pos(current_id + 1);
+                    const NInt degree = idx_end - idx_start;
+                    const NInt shift = fRNG.uniform_int(degree);
+                    const NInt nid = graph.getOutNeighbor(idx_start + shift);
                     current_id = nid;
                 }
                 walks[index++] = current_id;
@@ -154,10 +158,10 @@ public:
             std::fclose(f);
             start_indices.clear();
             start_indices.resize(graph.getNumOfVertices(), 0);
-            for (VertexIdType prev_id = 0, id = 1; id < graph.getNumOfVertices(); ++prev_id, ++id) {
+            for (NInt prev_id = 0, id = 1; id < graph.getNumOfVertices(); ++prev_id, ++id) {
                 start_indices[id] =
                         start_indices[prev_id]
-                        + std::max((VertexIdType) 1u, graph.original_out_degree(prev_id));
+                        + std::max((NInt) 1u, graph.original_out_degree(prev_id));
             }
         } else {
             printf("WalkCache::load; File Not Exists.\n");
@@ -167,21 +171,17 @@ public:
         // printf("Time Used For Loading Cache : %.2f\n", end - start);
     }
 
-    void show() {
-        show_vector("The cache walk vector", walks);
-    }
-
-    inline const VertexIdType &get_zero_hop_start_index(const VertexIdType &_vid) const {
+    inline const NInt &get_zero_hop_start_index(const NInt &_vid) const {
         // assert(_vid < graph.getNumOfVertices());
         return start_indices[_vid];
     }
 
-    inline VertexIdType get_one_hop_start_index(const VertexIdType &_vid) const {
+    inline NInt get_one_hop_start_index(const NInt &_vid) const {
         // assert(_vid < graph.getNumOfVertices());
         return start_indices[_vid];
     }
 
-    inline const VertexIdType &get_walk(const VertexIdType &_index) const {
+    inline const NInt &get_walk(const NInt &_index) const {
         assert(_index < walks.size());
         return walks[_index];
     }

@@ -29,7 +29,7 @@ If you find this work useful, please cite our paper:
 ```
 
 ## Usage
-**We provide a complete example and its log in the [demo notebook](demo.ipynb). The sample PubMed dataset is available in the [data folder](data/pubmed/).**
+**We provide a complete example and its log in the [demo notebook](demo.ipynb). The sample PubMed dataset is available in the [data folder](data_demo/pubmed/).**
 
 ### Data Preparation
 1. Download data (links [below](#dataset-link)) in GBP format to path `data/[dataset_name]`. Similar to the PubMed dataset example, there are three files:
@@ -46,7 +46,7 @@ If you find this work useful, please cite our paper:
   * `query.txt`: indices of queried nodes
 
 ### Precompute
-1. Environment: CMake 3.16, C++ 14. Dependencies (already included): [libnpy](https://github.com/llohse/libnpy/)
+1. Environment: CMake 3.16, C++ 14. Dependencies: [eigen3](https://eigen.tuxfamily.org/index.php?title=Main_Page)
 2. CMake `cmake -B build`, then `make`
 3. Run script: `./run_pubmed.sh`
 

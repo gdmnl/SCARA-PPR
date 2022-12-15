@@ -1,3 +1,7 @@
+/*
+  Type and class definitions
+  Author: nyLiao
+*/
 #ifndef SCARA_BASICDEFINITION_H
 #define SCARA_BASICDEFINITION_H
 
@@ -6,52 +10,109 @@
 // #endif
 
 #include <queue>
+#include <vector>
+#include <cmath>
 
-typedef unsigned long VertexIdType;
-typedef unsigned long EdgeSizeType;
+using std::cout;
+using std::endl;
+
 #define IDFMT "lu"
-typedef float PageRankScoreType;
+typedef unsigned long NInt;         // Type of Node / Edge size
+typedef float ScoreFlt;             // Type of PPR Score
+typedef std::vector<NInt> IntVector;
+typedef std::vector<ScoreFlt> FltVector;
 
-
-template<class FLOAT_TYPE>
+template<class FLT>
 struct IdScorePair {
-    VertexIdType id = 0;
-    FLOAT_TYPE score = 0;
+    NInt id = 0;
+    FLT score = 0;
 
-    IdScorePair(const VertexIdType &_id = 0, const FLOAT_TYPE &_score = 0) :
+    IdScorePair(const NInt &_id = 0, const FLT &_score = 0) :
             id(_id), score(_score) {}
 };
 
-template<class FLOAT_TYPE>
+template<class FLT>
 struct IdScorePairComparatorGreater {
     // Compare 2 IdScorePair objects using name
-    bool operator()(const IdScorePair<FLOAT_TYPE> &pair1, const IdScorePair<FLOAT_TYPE> &pair2) {
+    bool operator()(const IdScorePair<FLT> &pair1, const IdScorePair<FLT> &pair2) {
         return pair1.score > pair2.score || pair1.score == pair2.score && pair1.id < pair2.id;
     }
 };
 
-template<class FLOAT_TYPE>
+template<class FLT>
 struct IdScorePairComparatorLess {
     // Compare 2 IdScorePair objects using name
-    bool operator()(const IdScorePair<FLOAT_TYPE> &pair1, const IdScorePair<FLOAT_TYPE> &pair2) {
+    bool operator()(const IdScorePair<FLT> &pair1, const IdScorePair<FLT> &pair2) {
         return pair1.score < pair2.score || pair1.score == pair2.score && pair1.id < pair2.id;
     }
 };
 
-typedef std::priority_queue<IdScorePair<float>, std::vector<IdScorePair<float> >, IdScorePairComparatorGreater<float> > IdScorePairMaxQueue_float;
-
 struct Edge {
-    VertexIdType from_id;
-    VertexIdType to_id;
+    NInt from_id;
+    NInt to_id;
 
     Edge() : from_id(0), to_id(0) {}
 
-    Edge(const VertexIdType &_from, const VertexIdType &_to) :
+    Edge(const NInt &_from, const NInt &_to) :
             from_id(_from), to_id(_to) {}
 
     bool operator<(const Edge &_edge) const {
         return from_id < _edge.from_id || (from_id == _edge.from_id && to_id < _edge.to_id);
     }
+};
+
+class VertexQueue {
+private:
+    const NInt mask;
+    IntVector queue;
+    NInt num = 0;
+    NInt idx_front = 0;
+    NInt idx_last_plus_one = 0;
+private:
+    static inline NInt compute_queue_size(const NInt &_numOfVertices) {
+        return (1u) << (uint32_t) ceil(log2(_numOfVertices + 2u));
+    }
+
+public:
+    explicit VertexQueue(const NInt &_numOfVertices) :
+            mask(compute_queue_size(_numOfVertices) - 1),
+            queue(mask + 2u, 0) {}
+
+    inline void clear() {
+        idx_front = 0;
+        idx_last_plus_one = 0;
+        num = 0;
+    }
+
+    inline const NInt &size() const { return num; }
+
+    inline const NInt &front() const { return queue[idx_front]; }
+
+    inline void pop() {
+        --num;
+        ++idx_front;
+        idx_front &= mask;
+    }
+
+    inline void push(const NInt &_elem) {
+        ++num;
+        queue[idx_last_plus_one] = _elem;
+        ++idx_last_plus_one;
+        idx_last_plus_one &= mask;
+    }
+
+    inline bool empty() const {
+        return idx_last_plus_one == idx_front;
+    }
+};
+
+struct FwdPushStructure {
+    VertexQueue active_vertices;        // reserve one slot for the dummy vertex
+    std::vector<bool> is_active;    // reserve one slot for the dummy vertex
+
+    explicit FwdPushStructure(const NInt &numOfVertices) :
+            active_vertices(numOfVertices + 1),
+            is_active(numOfVertices + 1, false) {}
 };
 
 #endif //SCARA_BASICDEFINITION_H

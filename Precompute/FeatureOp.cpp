@@ -1,3 +1,7 @@
+/*
+  Implementation of embedding computation from feature
+  Author: nyLiao
+*/
 #include <thread>
 #include "Graph.h"
 #include "SpeedPPR.h"
@@ -14,30 +18,32 @@ protected:
     Param &param;
     Graph &graph;
     class SpeedPPR ppr;
-    std::vector<VertexIdType> Vt_nodes; // list of queried nodes
-    MyMatrix feature_matrix;
+    IntVector   Vt_nodes;       // list of queried nodes
+    My2DVector  feat_v2d;       // feature matrix data
+    MyMatrix    feat_matrix;    // feature matrix mapped as vec of vec
 #ifdef ENABLE_RW
     WalkCache walkCache;
 #endif
 
-    VertexIdType thread_num;            // number of threads
-    PageRankScoreType epsilon;
-    PageRankScoreType alpha;
-    PageRankScoreType lower_threshold;
+    NInt thread_num;            // number of threads
+    ScoreFlt epsilon;
+    ScoreFlt alpha;
+    ScoreFlt lower_threshold;
 
 public:
-    VertexIdType V_num;                 // number of vertices
-    VertexIdType Vt_num;                // number of queried nodes
-    VertexIdType feat_size;             // size of feature
-    VertexIdType spt_size;              // size of feature per split (ceiling)
-    VertexIdType thd_size;              // size of feature per thread per split
+    NInt V_num;                 // number of vertices
+    NInt Vt_num;                // number of queried nodes
+    NInt feat_size;             // size of feature
+    NInt thd_size;              // size of feature per thread
     // statistics
-    double total_time = 0;
+    double time_total = 0;
     std::vector<double> time_read;
     std::vector<double> time_write;
     std::vector<double> time_push;
-
-    My2DVector out_matrix;
+    std::vector<double> time_init;
+    std::vector<double> time_fp;
+    std::vector<double> time_it;
+    std::vector<double> time_rw;
 
 public:
 
@@ -52,13 +58,17 @@ public:
             lower_threshold(1.0 / _graph.getNumOfVertices()),
             graph(_graph),
             param(_param) {
+        printf("Init   RSS RAM: %.3f GB\n", get_stat_memory());
         Vt_num = load_query(Vt_nodes, param.query_file, V_num);
-        feat_size = load_feature(Vt_nodes, feature_matrix, param.feature_file);
-        spt_size = (feat_size + param.split_num - 1) / param.split_num;
-        out_matrix.allocate(spt_size, V_num);   // spt_size rows, V_num columns
-        printf("Result size: %ld \n", out_matrix.size());
-        // Perform cached random walk
+        feat_v2d.load_npy(param.feature_file);
+        // printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
+        feat_size = feat_v2d.nrows();
+        feat_matrix.set_size(feat_size, V_num);
+        feat_matrix.from_V2D(feat_v2d, Vt_nodes);
+        printf("Max  RSS   RAM: %.3f GB\n", get_proc_memory());
+        // printf("Mat    RSS RAM: %.3f GB\n", get_stat_memory());
 #ifdef ENABLE_RW
+        // Perform cached random walk
         if (param.index) {
             graph.set_dummy_neighbor(graph.get_dummy_id());
             walkCache.generate();
@@ -67,186 +77,176 @@ public:
 #endif
         graph.fill_dead_end_neighbor_with_id();
 
-        thread_num = std::min(spt_size, (VertexIdType) param.thread_num);
-        thd_size = (spt_size + thread_num - 1) / thread_num;
+        thread_num = (NInt) param.thread_num;
+        thd_size = (feat_size + thread_num - 1) / thread_num;
         time_read.resize(thread_num, 0);
         time_write.resize(thread_num, 0);
         time_push.resize(thread_num, 0);
+        time_init.resize(thread_num, 0);
+        time_fp.resize(thread_num, 0);
+        time_it.resize(thread_num, 0);
+        time_rw.resize(thread_num, 0);
     }
 
-    void push_one(const VertexIdType i, const VertexIdType tid,
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
-            std::vector<PageRankScoreType> &_seed) {
+    void push_one(const NInt i, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
         // printf("ID: %4" IDFMT "\n", i);
         double time_start = getCurrentTime();
-        propagate_vector(feature_matrix[i], _seed, Vt_nodes, V_num, true);
-        time_read[tid] += getCurrentTime() - time_start;
-
-        time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, walkCache);
         else
-            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold);
 #else
-        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
-        // Save embedding vector of feature i on all nodes to out_matrix
+        // Save embedding vector of feature i on all nodes to feat_matrix in place
         time_start = getCurrentTime();
-        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-                         out_matrix[i%spt_size].begin());
+        feat_matrix[i].swap(_gstruct.means);        // feat_matrix[i] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
     }
 
-    void push_thread(const VertexIdType feat_left, const VertexIdType feat_right, const VertexIdType tid) {
-        // std::cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<std::endl;
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;
-        for (VertexIdType i = feat_left; i < feat_right; i++) {
-            push_one(i, tid, graph_structure, seed);
+    void push_thread(const NInt feat_left, const NInt feat_right, const NInt tid) {
+        // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        for (NInt i = feat_left; i < feat_right; i++) {
+            push_one(i, tid, gstruct);
         }
+        time_init[tid] = gstruct.time_init;
+        time_fp[tid]   = gstruct.time_fp;
+        time_it[tid]   = gstruct.time_it;
+        time_rw[tid]   = gstruct.time_rw;
     }
 
-    void save_output(const VertexIdType feat_left, const VertexIdType feat_right) {
+    void save_output(const NInt feat_left, const NInt feat_right) {
         if (param.output_estimations) {
-            VertexIdType spt = feat_left / spt_size;    // index of split
             std::stringstream res_file;
-            if (param.split_num <= 1) {
-                res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
-            } else {
-                res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << "_" << spt << ".npy";
-            }
-            output_feature(out_matrix.get_data(), res_file.str(), feat_right - feat_left, V_num);
+            res_file << param.estimation_folder << "/score_" << param.alpha << '_' << param.epsilon << ".npy";
+            feat_matrix.to_V2D(feat_v2d);
+            feat_v2d.save_npy(res_file.str());
         }
     }
 
     void show_statistics() {
-        printf("Mem: %ld MB\n", get_proc_memory()/1000);
-        printf("Total Time    : %.6f, Average: %.12f / node-thread\n", total_time, total_time * thread_num / feat_size);
+        printf("%s\n", std::string(80, '-').c_str());
+        printf("Max RU_RSS RAM: %.3f GB\n", get_proc_memory());
+        printf("End    RSS RAM: %.3f GB\n", get_stat_memory());
+        printf("Total Time    : %.6f, Average: %.12f / node-thread\n", time_total, time_total * thread_num / feat_size);
         printf("Push  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
-        printf("Read  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
+        printf("  Init     Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);
+        printf("  FwdPush  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_fp), vector_L1(time_fp) / thread_num);
+        printf("  PIter    Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_it), vector_L1(time_it) / thread_num);
+        printf("  RW       Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_rw), vector_L1(time_rw) / thread_num);
+        // printf("Read  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
         printf("Write Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_write), vector_L1(time_write) / thread_num);
     }
 
     void push() {
-        // !: output matrix corrupts when split_num > 1
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            std::vector<std::thread> threads;
+        std::vector<std::thread> threads;
 
-            double time_start = getCurrentTime();
-            for (VertexIdType thd_left = spt_left; thd_left < spt_right; thd_left += thd_size) {
-                VertexIdType thd_right = std::min(spt_right, thd_left + thd_size);
-                VertexIdType tid = thd_left / thd_size;
-                threads.emplace_back(std::thread(&Base::push_thread, this, thd_left, thd_right, tid));
-            }
-            for (auto &t : threads) {
-                t.join();
-            }
-            total_time += getCurrentTime() - time_start;
-
-            save_output(spt_left, spt_right);
+        double time_start = getCurrentTime();
+        for (NInt thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
+            NInt thd_right = std::min(feat_size, thd_left + thd_size);
+            NInt tid = thd_left / thd_size;
+            threads.emplace_back(std::thread(&Base::push_thread, this, thd_left, thd_right, tid));
         }
+        for (auto &t : threads) {
+            t.join();
+        }
+        time_total += getCurrentTime() - time_start;
+
+        save_output(0, feat_size);
     }
 
     // No threading, debug use
     void push_single() {
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            double time_start = getCurrentTime();
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-            std::vector<PageRankScoreType> seed;
-            for (VertexIdType i = spt_left; i < spt_right; i++) {
-                push_one(i, 0, graph_structure, seed);
-            }
-            total_time += getCurrentTime() - time_start;
-            save_output(spt_left, spt_right);
+        double time_start = getCurrentTime();
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        FltVector seed;
+        for (NInt i = 0; i < feat_size; i++) {
+            push_one(i, 0, gstruct);
         }
+        time_total += getCurrentTime() - time_start;
+        save_output(0, feat_size);
     }
 
 };
 
+
 class Base_reuse : public Base {
 
 public:
-    VertexIdType base_size;
+    NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    PageRankScoreType avg_tht = 0;      // base theta
-    PageRankScoreType avg_res = 0;      // reuse residue
-    VertexIdType re_feat_num = 0;       // number of reused features
+    ScoreFlt avg_tht = 0;       // base theta
+    ScoreFlt avg_res = 0;       // reuse residue
+    NInt re_feat_num = 0;       // number of reused features
 
 protected:
-    std::vector<VertexIdType> base_idx; // index of base features
-    MyMatrix base_matrix;               // matrix of base features
-    MyMatrix base_result;               // output result (on all features and nodes)
+    IntVector base_idx;         // index of base features
+    MyMatrix base_matrix;       // matrix of base features
+    MyMatrix base_result;       // output result (on all features and nodes)
 
 public:
 
     Base_reuse(Graph &_graph, Param &_param) :
             Base(_graph, _param),
-            base_size(std::max(VertexIdType (3u), VertexIdType (feat_size * param.base_ratio))),
-            base_matrix(base_size, Vt_num),
+            base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
+            base_matrix(base_size, V_num),
             base_result(base_size, V_num) {
-        base_idx = select_base(feature_matrix, base_matrix);
+        base_idx = select_base(feat_matrix, base_matrix);
         printf("Base size: %ld \n", base_result.size());
         time_reuse.resize(thread_num, 0);
     }
 
-    void push_one_base(const VertexIdType idx, const VertexIdType tid,
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
-            std::vector<PageRankScoreType> &_seed) {
+    void push_one_base(const NInt idx, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
         // printf("ID: %4" IDFMT "  as base\n", idx);
         double time_start = getCurrentTime();
-        propagate_vector(base_matrix[idx], _seed, Vt_nodes, V_num, false);
-        time_read[tid] += getCurrentTime() - time_start;
-
-        time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, param.gamma);
+            ppr.calc_ppr_cache(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, param.gamma);
         else
-            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
+            ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, param.gamma);
 #else
-        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, param.gamma);
+        ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, param.gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        base_result.set_row(idx, _graph_structure.means);
+        base_result[idx].swap(_gstruct.means);      // base_result[idx] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
     }
 
-    void push_thread_base(const VertexIdType feat_left, const VertexIdType feat_right, const VertexIdType tid) {
-        // std::cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<std::endl;
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;
-        for (VertexIdType i = feat_left; i < feat_right; i++) {
-            push_one_base(i, tid, graph_structure, seed);
+    void push_thread_base(const NInt feat_left, const NInt feat_right, const NInt tid) {
+        // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        for (NInt i = feat_left; i < feat_right; i++) {
+            push_one_base(i, tid, gstruct);
         }
+        time_init[tid] += gstruct.time_init;
+        time_fp[tid]   += gstruct.time_fp;
+        time_it[tid]   += gstruct.time_it;
+        time_rw[tid]   += gstruct.time_rw;
     }
 
-    void push_one_rest(const VertexIdType i, const VertexIdType tid,
-            SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> &_graph_structure,
-            std::vector<PageRankScoreType> &_seed, std::vector<PageRankScoreType> &_raw_seed) {
-        for (VertexIdType idx = 0; idx < base_size; idx++) {
+    void push_one_rest(const NInt i, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
+        for (NInt idx = 0; idx < base_size; idx++) {
             if (base_idx[idx] == i) {
                 // printf("ID: %4" IDFMT "  is base\n", i);
                 double time_start = getCurrentTime();
-                std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix[i%spt_size].begin());
+                feat_matrix.copy_row(i, base_result[idx]);
                 time_write[tid] += getCurrentTime() - time_start;
                 return;
             }
         }
 
         double time_start = getCurrentTime();
-        _raw_seed.swap(feature_matrix[i]);
-        std::vector<PageRankScoreType> base_weight = reuse_weight(_raw_seed, base_matrix);
-        PageRankScoreType theta_sum = vector_L1(base_weight);
+        FltVector base_weight = reuse_weight(feat_matrix[i], base_matrix);
+        ScoreFlt theta_sum = vector_L1(base_weight);
         avg_tht += theta_sum;
-        avg_res += vector_L1(_raw_seed);
+        avg_res += vector_L1(feat_matrix[i]);
         // printf("ID: %4" IDFMT ", theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(_raw_seed));
         // Ignore less relevant features
         // if (theta_sum < 1.6) return;
@@ -254,41 +254,38 @@ public:
         time_reuse[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        propagate_vector(_raw_seed, _seed, Vt_nodes, V_num, true);
-        time_read[tid] += getCurrentTime() - time_start;
-
-        time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_graph_structure, _seed, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
         else
-            ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
 #else
-        ppr.calc_ppr_walk(_graph_structure, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        for (VertexIdType idx = 0; idx < base_size; idx++){
+        for (NInt idx = 0; idx < base_size; idx++){
             if (base_weight[idx] != 0) {
-                for (VertexIdType j = 0; j < V_num; j++)
-                    _graph_structure.means[j] += base_result[idx][j] * base_weight[idx];
+                for (NInt j = 0; j < V_num; j++)
+                    _gstruct.means[j] += base_result[idx][j] * base_weight[idx];
             }
         }
         // Save embedding vector of feature i on all nodes to out_matrix
-        std::swap_ranges(_graph_structure.means.begin(), _graph_structure.means.end()-2,
-                         out_matrix[i%spt_size].begin());
+        feat_matrix[i].swap(_gstruct.means);        // feat_matrix[i] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
     }
 
-    void push_thread_rest(const VertexIdType feat_left, const VertexIdType feat_right, const VertexIdType tid) {
-        // std::cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<std::endl;
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;        // seed (length V_num) for push
-        std::vector<PageRankScoreType> raw_seed;    // seed (length Vt_num) for reuse
-        for (VertexIdType i = feat_left; i < feat_right; i++) {
-            push_one_rest(i, tid, graph_structure, seed, raw_seed);
+    void push_thread_rest(const NInt feat_left, const NInt feat_right, const NInt tid) {
+        // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
+        for (NInt i = feat_left; i < feat_right; i++) {
+            push_one_rest(i, tid, gstruct);
         }
+        time_init[tid] += gstruct.time_init;
+        time_fp[tid]   += gstruct.time_fp;
+        time_it[tid]   += gstruct.time_it;
+        time_rw[tid]   += gstruct.time_rw;
     }
 
     void show_statistics() {
@@ -302,77 +299,69 @@ public:
 
     void push() {
         // Calculate base PPR
-        VertexIdType thread_num_base = std::min(base_size, thread_num);
-        VertexIdType thd_size_base = (base_size + thread_num_base - 1) / thread_num_base;
+        NInt thread_num_base = std::min(base_size, thread_num);
+        NInt thd_size_base = (base_size + thread_num_base - 1) / thread_num_base;
         std::vector<std::thread> threads_base;
 
         double time_start = getCurrentTime();
-        for (VertexIdType thd_left = 0; thd_left < base_size; thd_left += thd_size_base) {
-            VertexIdType thd_right = std::min(base_size, thd_left + thd_size_base);
-            VertexIdType tid = thd_left / thd_size_base;
+        for (NInt thd_left = 0; thd_left < base_size; thd_left += thd_size_base) {
+            NInt thd_right = std::min(base_size, thd_left + thd_size_base);
+            NInt tid = thd_left / thd_size_base;
             threads_base.emplace_back(std::thread(&Base_reuse::push_thread_base, this, thd_left, thd_right, tid));
         }
         for (auto &t : threads_base) {
                 t.join();
             }
-        total_time += getCurrentTime() - time_start;
-        printf("Time Used on Base %.6f\n", total_time);
+        time_total += getCurrentTime() - time_start;
+        printf("Time Used on Base %.6f\n", time_total);
 
         // Calculate rest PPR
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            std::vector<std::thread> threads;
+        std::vector<std::thread> threads;
 
-            double time_start = getCurrentTime();
-            for (VertexIdType thd_left = spt_left; thd_left < spt_right; thd_left += thd_size) {
-                VertexIdType thd_right = std::min(spt_right, thd_left + thd_size);
-                VertexIdType tid = thd_left / thd_size;
-                threads.emplace_back(std::thread(&Base_reuse::push_thread_rest, this, thd_left, thd_right, tid));
-            }
-            for (auto &t : threads) {
-                t.join();
-            }
-            total_time += getCurrentTime() - time_start;
-
-            save_output(spt_left, spt_right);
+        time_start = getCurrentTime();
+        for (NInt thd_left = 0; thd_left < feat_size; thd_left += thd_size) {
+            NInt thd_right = std::min(feat_size, thd_left + thd_size);
+            NInt tid = thd_left / thd_size;
+            threads.emplace_back(std::thread(&Base_reuse::push_thread_rest, this, thd_left, thd_right, tid));
         }
+        for (auto &t : threads) {
+            t.join();
+        }
+        time_total += getCurrentTime() - time_start;
+
+        save_output(0, feat_size);
     }
 
     // No multithreading, debug use
     void push_single() {
-        SpeedPPR::WHOLE_GRAPH_STRUCTURE<PageRankScoreType> graph_structure(V_num);
-        std::vector<PageRankScoreType> seed;        // seed (length V_num) for push
-        std::vector<PageRankScoreType> raw_seed;    // seed (length Vt_num) for reuse
+        SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
         // Calculate base PPR
         double time_start = getCurrentTime();
-        for(VertexIdType i = 0; i < base_size; i++){
-            push_one_base(i, 0, graph_structure, seed);
+        for(NInt i = 0; i < base_size; i++){
+            push_one_base(i, 0, gstruct);
         }
-        total_time += getCurrentTime() - time_start;
-        printf("Time Used on Base %.6f\n", total_time);
+        time_total += getCurrentTime() - time_start;
+        printf("Time Used on Base %.6f\n", time_total);
         // Calculate rest PPR
-        for (VertexIdType spt_left = 0; spt_left < feat_size; spt_left += spt_size) {
-            VertexIdType spt_right = std::min(feat_size, spt_left + spt_size);
-            double time_start = getCurrentTime();
-            for (VertexIdType i = spt_left; i < spt_right; i++) {
-                push_one_rest(i, 0, graph_structure, seed, raw_seed);
-            }
-            total_time += getCurrentTime() - time_start;
-            save_output(spt_left, spt_right);
+        time_start = getCurrentTime();
+        for (NInt i = 0; i < feat_size; i++) {
+            push_one_rest(i, 0, gstruct);
         }
+        time_total += getCurrentTime() - time_start;
+        save_output(0, feat_size);
     }
 
 };
 
-
+/*
 class Base_pca : public Base {
 public:
-    VertexIdType base_size;
+    NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    PageRankScoreType avg_tht = 0;      // base theta
-    PageRankScoreType avg_res = 0;      // reuse residue
-    VertexIdType re_feat_num = 0;       // number of reused features
+    ScoreFlt avg_tht = 0;      // base theta
+    ScoreFlt avg_res = 0;      // reuse residue
+    NInt re_feat_num = 0;       // number of reused features
 
 protected:
     MyMatrix theta_matrix;              // matrix of principal directions
@@ -383,7 +372,7 @@ public:
 
     Base_pca (Graph &_graph, Param &_param) :
             Base(_graph, _param),
-            base_size(std::max(VertexIdType (3u), VertexIdType (feat_size * param.base_ratio))),
+            base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
             base_matrix(base_size, Vt_num),
             base_result(base_size, V_num) {
         theta_matrix = select_pc(feature_matrix, base_matrix);
@@ -392,3 +381,4 @@ public:
     }
 
 };
+*/
