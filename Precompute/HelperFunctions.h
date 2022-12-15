@@ -19,6 +19,7 @@
 #include <numeric>
 #include <chrono>
 #include <unistd.h>
+#include <malloc.h>
 #include "BasicDefinition.h"
 #ifdef __linux__
     #include <sys/resource.h>
@@ -28,10 +29,27 @@
 // ==================== Runtime measurement
 extern double getCurrentTime();
 
-inline long get_proc_memory(){
+inline float get_proc_memory(){
     struct rusage r_usage;
     getrusage(RUSAGE_SELF,&r_usage);
-    return r_usage.ru_maxrss;
+    return r_usage.ru_maxrss/1000000.0;
+}
+
+inline float get_alloc_memory(){
+    struct mallinfo mi = mallinfo();
+    return mi.uordblks / 1000000000.0;
+}
+
+inline float get_stat_memory(){
+    long rss;
+    std::string ignore;
+    std::ifstream ifs("/proc/self/stat", std::ios_base::in);
+    ifs >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore
+            >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore >> ignore
+            >> ignore >> ignore >> ignore >> rss;
+
+    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024;
+    return rss * page_size_kb / 1000000.0;
 }
 
 // ==================== Argument parsing

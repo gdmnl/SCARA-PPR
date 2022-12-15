@@ -58,12 +58,15 @@ public:
             lower_threshold(1.0 / _graph.getNumOfVertices()),
             graph(_graph),
             param(_param) {
+        printf("Init   RSS RAM: %.3f GB\n", get_stat_memory());
         Vt_num = load_query(Vt_nodes, param.query_file, V_num);
         feat_v2d.load_npy(param.feature_file);
+        // printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
         feat_size = feat_v2d.nrows();
         feat_matrix.set_size(feat_size, V_num);
         feat_matrix.from_V2D(feat_v2d, Vt_nodes);
-        feat_v2d.clear();
+        printf("Max  RSS   RAM: %.3f GB\n", get_proc_memory());
+        // printf("Mat    RSS RAM: %.3f GB\n", get_stat_memory());
 #ifdef ENABLE_RW
         // Perform cached random walk
         if (param.index) {
@@ -126,7 +129,9 @@ public:
     }
 
     void show_statistics() {
-        printf("Mem: %ld MB\n", get_proc_memory()/1000);
+        printf("%s\n", std::string(80, '-').c_str());
+        printf("Max RU_RSS RAM: %.3f GB\n", get_proc_memory());
+        printf("End    RSS RAM: %.3f GB\n", get_stat_memory());
         printf("Total Time    : %.6f, Average: %.12f / node-thread\n", total_time, total_time * thread_num / feat_size);
         printf("Push  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
         printf("  Init     Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);

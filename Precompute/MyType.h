@@ -55,6 +55,8 @@ private:
         void erase() {
             parent.data.erase(parent.data.begin() + row * parent.ncol,
                               parent.data.begin() + (row + 1) * parent.ncol);
+            parent.nrow--;
+            parent.data.resize(parent.nrow * parent.ncol);
         }
     };
 
@@ -113,6 +115,7 @@ public:
         npy::LoadArrayFromNumpy(file_path, shape, fortran_order, data);
         nrow = shape[0];    // feature size F
         ncol = shape[1];    // node num Vt_num
+        printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
         cout<<"Input file: "<<nrow<<" "<<ncol<<" "<<file_path<<endl;
     }
 
@@ -205,18 +208,19 @@ public:
     void from_V2D(My2DVector matv2d, const IntVector Vt_nodes) {
         data.resize(nrow);
         if (matv2d.ncols() == ncol) {
-            for (NInt i = 0; i < nrow; ++i) {
+            for (long i = nrow-1; i >= 0; --i) {
                 data[i] = FltVector(std::make_move_iterator(matv2d[i].begin()),
                                     std::make_move_iterator(matv2d[i].end()) );
                 // NOTE: Actual size of data[i] is V_num+2 to be in line with SpeedPPR::gstruct.means
                 data[i].emplace_back(0);
                 data[i].emplace_back(0);
+                matv2d[i].erase();
             }
         } else {
             // populate Vt_nodes to all nodes
             assert(matv2d.ncols() == Vt_nodes.size());
             NInt idx = 0;
-            for (NInt i = 0; i < nrow; ++i) {
+            for (long i = nrow-1; i >= 0; --i) {
                 data[i] = FltVector(ncol+2, 0);
                 for (NInt j = 0; j < ncol; ++j) {
                     if (Vt_nodes[idx] == j) {
@@ -224,8 +228,12 @@ public:
                         idx++;
                     }
                 }
+                matv2d[i].erase();
             }
         }
+        matv2d.clear();
+        // ! Still require O(2n) RAM as My2DVectorRow::erase does not reallocate
+        printf("Mat    RSS RAM: %.3f GB\n", get_stat_memory());
         cout<<"Feat  size: "<<data.size()<<" "<<data[0].size()-2<<endl;
     }
 

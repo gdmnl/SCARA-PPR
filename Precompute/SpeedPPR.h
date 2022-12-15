@@ -132,6 +132,7 @@ public:
                 const std::vector<FLT> &_seeds, const FLT _epsilon,
                 const FLT _alpha, const FLT _lower_threshold,
                 const WalkCache &_walk_cache, const FLT gamma = 1.0) {
+        double time_start = getCurrentTime();
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLT>(graph.getNumOfEdges() / (FLT) graph.getNumOfVertices());
         FLT num_walks = ceil( (2 + (2.0 / 3.0) * _epsilon) * d_log_numOfVertices /
@@ -141,10 +142,17 @@ public:
         auto &pi = _gstruct.pi;
         auto &residuals = _gstruct.residuals;
         auto &means = _gstruct.means;
+        auto &time_init = _gstruct.time_init;
+        auto &time_fp = _gstruct.time_fp;
+        auto &time_it = _gstruct.time_it;
+        auto &time_rw = _gstruct.time_rw;
 
         std::fill(pi.begin(), pi.end(), 0);
         std::fill(residuals.begin(), residuals.end(), 0.0);
+        std::fill(is_active.begin(), is_active.end(), false);
+        active_vertices.clear();
 
+        // TODO: loop in Vt_nodes
         for(int i = 0; i < graph.getNumOfVertices(); i++){
             if(_seeds[i] != 0.0){
                 active_vertices.push(i);
@@ -152,7 +160,10 @@ public:
                 residuals[i] = _seeds[i] * num_walks;
             }
         }
+        time_init += getCurrentTime() - time_start;
 
+        // Forward Push
+        time_start = getCurrentTime();
         uint32_t num_active = 0;
         const FLT one_minus_alpha = 1.0 - _alpha;
         const NInt queue_threshold = (numOfVertices / avg_deg * 4);
@@ -172,7 +183,7 @@ public:
                 const FLT degree_f = idx_end - idx_start;
                 const FLT one_minus_alpha_residual = one_minus_alpha * residual;
 
-                if (fabs(one_minus_alpha_residual) >= degree_f * scale_factor) {
+                if (fabsf(one_minus_alpha_residual) >= degree_f * scale_factor) {
                     const FLT alpha_residual = residual - one_minus_alpha_residual;
                     pi[id] += alpha_residual;
                     residuals[id] = 0;
@@ -181,7 +192,6 @@ public:
                     for (uint32_t j = idx_start; j < idx_end; ++j) {
                         const NInt &nid = graph.getOutNeighbor(j);
                         residuals[nid] += increment;
-                        // TODO: why no threshold here (and similar places) ?
                         if (!is_active[nid]) {
                             active_vertices.push(nid);
                             is_active[nid] = true;
@@ -193,14 +203,17 @@ public:
 
             if (active_vertices.empty()) {
                 for (NInt id = 0; id < numOfVertices; ++id) {
-                    if (abs(one_minus_alpha * residuals[id]) >= scale_factor) {
+                    if (fabsf(one_minus_alpha * residuals[id]) >= scale_factor) {
                         active_vertices.push(id);
                         is_active[id] = true;
                     }
                 }
             }
         }
+        time_fp += getCurrentTime() - time_start;
 
+        // PowerIter
+        time_start = getCurrentTime();
         num_active = active_vertices.size();
         const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
 
@@ -209,7 +222,7 @@ public:
         std::fill(is_active.begin(), is_active.end(), false);
         for (NInt id = 0; id < numOfVertices; ++id) {
             // TODO: add abs
-            if (residuals[id] >= one_over_one_minus_alpha) {
+            if (fabsf(residuals[id]) >= one_over_one_minus_alpha) {
                 active_vertices.push(id);
                 is_active[id] = true;
             }
@@ -223,7 +236,7 @@ public:
             const NInt &idx_end = graph.get_neighbor_list_start_pos(id + 1);
             const auto degree_f = static_cast<FLT>(idx_end - idx_start);
             const FLT one_minus_alpha_residual = one_minus_alpha * residual;
-            if (fabs(one_minus_alpha_residual) >= degree_f && degree_f) {
+            if (fabsf(one_minus_alpha_residual) >= degree_f && degree_f) {
                 const FLT alpha_residual = residual - one_minus_alpha_residual;
                 pi[id] += alpha_residual;
                 residuals[id] = 0;
@@ -238,8 +251,10 @@ public:
                 }
             }
         }
+        time_it += getCurrentTime() - time_start;
 
         // random walks
+        time_start = getCurrentTime();
         means.swap(pi);
         for (NInt id = 0; id < numOfVertices; ++id) {
             FLT &residual = residuals[id];
@@ -249,7 +264,7 @@ public:
                 residuals[id] -= alpha_residual;
 
                 NInt idx_one_hop = _walk_cache.get_one_hop_start_index(id);
-                const FLT num_one_hop_walks = std::ceil(abs(residual));
+                const FLT num_one_hop_walks = std::ceil(fabsf(residual));
                 const FLT correction_factor = residual / num_one_hop_walks;
                 const uint32_t end_one_hop = idx_one_hop + num_one_hop_walks;
                 for (; idx_one_hop < end_one_hop; ++idx_one_hop) {
@@ -260,14 +275,14 @@ public:
 
         // compute bounds
         const FLT one_over_num_walks = (1.0f / num_walks);
-        // TODO: add abs
-        const auto scale_factor = static_cast<FLT>(1.0 / (1.0 - residuals[numOfVertices] * one_over_num_walks
-                                                                 - means[numOfVertices] * one_over_num_walks));
+        const auto scale_factor = static_cast<FLT>(1.0 / (1.0 - fabsf(residuals[numOfVertices]) * one_over_num_walks
+                                                              - fabsf(    means[numOfVertices]) * one_over_num_walks));
         const auto one_over_num_walks_x_scale_factor = one_over_num_walks * scale_factor;
         for (auto &mean :means) {
             mean *= one_over_num_walks_x_scale_factor;
         }
         means[numOfVertices] = 0;
+        time_rw += getCurrentTime() - time_start;
     }
 #endif
 
@@ -330,7 +345,7 @@ public:
                 const FLT degree_f = idx_end - idx_start;
                 const FLT one_minus_alpha_residual = one_minus_alpha * residual;
 
-                if (fabs(one_minus_alpha_residual) >= degree_f * scale_factor) {
+                if (fabsf(one_minus_alpha_residual) >= degree_f * scale_factor) {
                     const FLT alpha_residual = residual - one_minus_alpha_residual;
                     pi[id] += alpha_residual;
                     residuals[id] = 0;
@@ -350,7 +365,7 @@ public:
 
             if (active_vertices.empty()) {
                 for (NInt id = 0; id < numOfVertices; ++id) {
-                    if (abs(one_minus_alpha * residuals[id]) >= scale_factor) {
+                    if (fabsf(one_minus_alpha * residuals[id]) >= scale_factor) {
                         active_vertices.push(id);
                         is_active[id] = true;
                     }
@@ -359,7 +374,7 @@ public:
         }
         time_fp += getCurrentTime() - time_start;
 
-        // iter
+        // PowerIter
         time_start = getCurrentTime();
         num_active = active_vertices.size();
         const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
@@ -368,7 +383,7 @@ public:
         active_vertices.clear();
         std::fill(is_active.begin(), is_active.end(), false);
         for (NInt id = 0; id < numOfVertices; ++id) {
-            if (residuals[id] >= one_over_one_minus_alpha) {
+            if (fabsf(residuals[id]) >= one_over_one_minus_alpha) {
                 active_vertices.push(id);
                 is_active[id] = true;
             }
@@ -382,7 +397,7 @@ public:
             const NInt &idx_end = graph.get_neighbor_list_start_pos(id + 1);
             const auto degree_f = static_cast<FLT>(idx_end - idx_start);
             const FLT one_minus_alpha_residual = one_minus_alpha * residual;
-            if (fabs(one_minus_alpha_residual) >= degree_f && degree_f) {
+            if (fabsf(one_minus_alpha_residual) >= degree_f && degree_f) {
                 const FLT alpha_residual = residual - one_minus_alpha_residual;
                 pi[id] += alpha_residual;
                 residuals[id] = 0;
@@ -423,7 +438,7 @@ public:
                 residual *= time_scaling_factor;
                 active_ids.push_back(id);
                 active_residuals.push_back(residual);
-                r_sum += fabs(residual);
+                r_sum += fabsf(residual);
             }
         }
 
@@ -477,8 +492,8 @@ public:
 
         // compute bounds
         const FLT one_over_num_walks = (1.0f / num_walks);
-        const auto scale_factor = static_cast<FLT>(1.0 / (1.0 - residuals[numOfVertices] * one_over_num_walks
-                                                              -     means[numOfVertices] * one_over_num_walks));
+        const auto scale_factor = static_cast<FLT>(1.0 / (1.0 - fabsf(residuals[numOfVertices]) * one_over_num_walks
+                                                              - fabsf(    means[numOfVertices]) * one_over_num_walks));
         const auto one_over_num_walks_x_scale_factor = one_over_num_walks * scale_factor;
         for (auto &mean :means) {
             mean *= one_over_num_walks_x_scale_factor;
