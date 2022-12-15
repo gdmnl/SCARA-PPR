@@ -200,7 +200,7 @@ public:
         }
     }
 
-    inline void set_row(const NInt &row, const FltVector &_data) {
+    inline void copy_row(const NInt &row, const FltVector &_data) {
         data[row] = _data;
         data[row].resize(ncol+2);
     }

@@ -36,7 +36,7 @@ public:
     NInt feat_size;             // size of feature
     NInt thd_size;              // size of feature per thread
     // statistics
-    double total_time = 0;
+    double time_total = 0;
     std::vector<double> time_read;
     std::vector<double> time_write;
     std::vector<double> time_push;
@@ -93,17 +93,17 @@ public:
         double time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], epsilon, alpha, lower_threshold, walkCache);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, walkCache);
         else
-            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], epsilon, alpha, lower_threshold);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold);
 #else
-        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], epsilon, alpha, lower_threshold);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         // Save embedding vector of feature i on all nodes to feat_matrix in place
         time_start = getCurrentTime();
-        feat_matrix[i].swap(_gstruct.means);
+        feat_matrix[i].swap(_gstruct.means);        // feat_matrix[i] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
     }
 
@@ -132,7 +132,7 @@ public:
         printf("%s\n", std::string(80, '-').c_str());
         printf("Max RU_RSS RAM: %.3f GB\n", get_proc_memory());
         printf("End    RSS RAM: %.3f GB\n", get_stat_memory());
-        printf("Total Time    : %.6f, Average: %.12f / node-thread\n", total_time, total_time * thread_num / feat_size);
+        printf("Total Time    : %.6f, Average: %.12f / node-thread\n", time_total, time_total * thread_num / feat_size);
         printf("Push  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
         printf("  Init     Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);
         printf("  FwdPush  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_fp), vector_L1(time_fp) / thread_num);
@@ -154,7 +154,7 @@ public:
         for (auto &t : threads) {
             t.join();
         }
-        total_time += getCurrentTime() - time_start;
+        time_total += getCurrentTime() - time_start;
 
         save_output(0, feat_size);
     }
@@ -167,90 +167,86 @@ public:
         for (NInt i = 0; i < feat_size; i++) {
             push_one(i, 0, gstruct);
         }
-        total_time += getCurrentTime() - time_start;
+        time_total += getCurrentTime() - time_start;
         save_output(0, feat_size);
     }
 
 };
 
-/*
+
 class Base_reuse : public Base {
 
 public:
     NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    ScoreFlt avg_tht = 0;      // base theta
-    ScoreFlt avg_res = 0;      // reuse residue
+    ScoreFlt avg_tht = 0;       // base theta
+    ScoreFlt avg_res = 0;       // reuse residue
     NInt re_feat_num = 0;       // number of reused features
 
 protected:
-    IntVector base_idx; // index of base features
-    MyMatrix base_matrix;               // matrix of base features
-    MyMatrix base_result;               // output result (on all features and nodes)
+    IntVector base_idx;         // index of base features
+    MyMatrix base_matrix;       // matrix of base features
+    MyMatrix base_result;       // output result (on all features and nodes)
 
 public:
 
     Base_reuse(Graph &_graph, Param &_param) :
             Base(_graph, _param),
             base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
-            base_matrix(base_size, Vt_num),
+            base_matrix(base_size, V_num),
             base_result(base_size, V_num) {
-        base_idx = select_base(feature_matrix, base_matrix);
+        base_idx = select_base(feat_matrix, base_matrix);
         printf("Base size: %ld \n", base_result.size());
         time_reuse.resize(thread_num, 0);
     }
 
-    void push_one_base(const NInt idx, const NInt tid,
-            SpeedPPR::GStruct<ScoreFlt> &_gstruct, FltVector &_seed) {
+    void push_one_base(const NInt idx, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
         // printf("ID: %4" IDFMT "  as base\n", idx);
         double time_start = getCurrentTime();
-        propagate_vector(base_matrix[idx], _seed, Vt_nodes, V_num, false);
-        time_read[tid] += getCurrentTime() - time_start;
-
-        time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, _seed, epsilon, alpha, lower_threshold, walkCache, param.gamma);
+            ppr.calc_ppr_cache(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, param.gamma);
         else
-            ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, param.gamma);
+            ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, param.gamma);
 #else
-        ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, param.gamma);
+        ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, param.gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        base_result.set_row(idx, _gstruct.means);
+        base_result[idx].swap(_gstruct.means);      // base_result[idx] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
     }
 
     void push_thread_base(const NInt feat_left, const NInt feat_right, const NInt tid) {
         // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
         SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
-        FltVector seed;
         for (NInt i = feat_left; i < feat_right; i++) {
-            push_one_base(i, tid, gstruct, seed);
+            push_one_base(i, tid, gstruct);
         }
+        time_init[tid] += gstruct.time_init;
+        time_fp[tid]   += gstruct.time_fp;
+        time_it[tid]   += gstruct.time_it;
+        time_rw[tid]   += gstruct.time_rw;
     }
 
-    void push_one_rest(const NInt i, const NInt tid,
-            SpeedPPR::GStruct<ScoreFlt> &_gstruct, FltVector &_seed, FltVector &_raw_seed) {
+    void push_one_rest(const NInt i, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
         for (NInt idx = 0; idx < base_size; idx++) {
             if (base_idx[idx] == i) {
                 // printf("ID: %4" IDFMT "  is base\n", i);
                 double time_start = getCurrentTime();
-                std::copy(base_result[idx].begin(), base_result[idx].end(), out_matrix[i].begin());
+                feat_matrix.copy_row(i, base_result[idx]);
                 time_write[tid] += getCurrentTime() - time_start;
                 return;
             }
         }
 
         double time_start = getCurrentTime();
-        _raw_seed.swap(feature_matrix[i]);
-        FltVector base_weight = reuse_weight(_raw_seed, base_matrix);
+        FltVector base_weight = reuse_weight(feat_matrix[i], base_matrix);
         ScoreFlt theta_sum = vector_L1(base_weight);
         avg_tht += theta_sum;
-        avg_res += vector_L1(_raw_seed);
+        avg_res += vector_L1(feat_matrix[i]);
         // printf("ID: %4" IDFMT ", theta_sum: %.6f, residue_sum: %.6f\n", i, theta_sum, vector_L1(_raw_seed));
         // Ignore less relevant features
         // if (theta_sum < 1.6) return;
@@ -258,17 +254,13 @@ public:
         time_reuse[tid] += getCurrentTime() - time_start;
 
         time_start = getCurrentTime();
-        propagate_vector(_raw_seed, _seed, Vt_nodes, V_num, true);
-        time_read[tid] += getCurrentTime() - time_start;
-
-        time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, _seed, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
         else
-            ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
 #else
-        ppr.calc_ppr_walk(_gstruct, _seed, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
@@ -280,19 +272,20 @@ public:
             }
         }
         // Save embedding vector of feature i on all nodes to out_matrix
-        std::swap_ranges(_gstruct.means.begin(), _gstruct.means.end()-2,
-                         out_matrix[i].begin());
+        feat_matrix[i].swap(_gstruct.means);        // feat_matrix[i] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
     }
 
     void push_thread_rest(const NInt feat_left, const NInt feat_right, const NInt tid) {
         // cout<<"  Pushing: "<<feat_left<<" "<<feat_right<<endl;
         SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
-        FltVector seed;        // seed (length V_num) for push
-        FltVector raw_seed;    // seed (length Vt_num) for reuse
         for (NInt i = feat_left; i < feat_right; i++) {
-            push_one_rest(i, tid, gstruct, seed, raw_seed);
+            push_one_rest(i, tid, gstruct);
         }
+        time_init[tid] += gstruct.time_init;
+        time_fp[tid]   += gstruct.time_fp;
+        time_it[tid]   += gstruct.time_it;
+        time_rw[tid]   += gstruct.time_rw;
     }
 
     void show_statistics() {
@@ -319,8 +312,8 @@ public:
         for (auto &t : threads_base) {
                 t.join();
             }
-        total_time += getCurrentTime() - time_start;
-        printf("Time Used on Base %.6f\n", total_time);
+        time_total += getCurrentTime() - time_start;
+        printf("Time Used on Base %.6f\n", time_total);
 
         // Calculate rest PPR
         std::vector<std::thread> threads;
@@ -334,7 +327,7 @@ public:
         for (auto &t : threads) {
             t.join();
         }
-        total_time += getCurrentTime() - time_start;
+        time_total += getCurrentTime() - time_start;
 
         save_output(0, feat_size);
     }
@@ -342,27 +335,25 @@ public:
     // No multithreading, debug use
     void push_single() {
         SpeedPPR::GStruct<ScoreFlt> gstruct(V_num);
-        FltVector seed;        // seed (length V_num) for push
-        FltVector raw_seed;    // seed (length Vt_num) for reuse
         // Calculate base PPR
         double time_start = getCurrentTime();
         for(NInt i = 0; i < base_size; i++){
-            push_one_base(i, 0, gstruct, seed);
+            push_one_base(i, 0, gstruct);
         }
-        total_time += getCurrentTime() - time_start;
-        printf("Time Used on Base %.6f\n", total_time);
+        time_total += getCurrentTime() - time_start;
+        printf("Time Used on Base %.6f\n", time_total);
         // Calculate rest PPR
         time_start = getCurrentTime();
         for (NInt i = 0; i < feat_size; i++) {
-            push_one_rest(i, 0, gstruct, seed, raw_seed);
+            push_one_rest(i, 0, gstruct);
         }
-        total_time += getCurrentTime() - time_start;
+        time_total += getCurrentTime() - time_start;
         save_output(0, feat_size);
     }
 
 };
 
-
+/*
 class Base_pca : public Base {
 public:
     NInt base_size;

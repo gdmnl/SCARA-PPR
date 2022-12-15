@@ -18,7 +18,7 @@ template<class FLT>
 inline FLT vector_L1(std::vector<FLT> Vec){
     FLT sum = 0;
     for(FLT a : Vec)
-        sum += fabs(a);
+        sum += fabsf(a);
     return sum;
 }
 
@@ -38,12 +38,12 @@ inline FLT calc_L1_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pac
     }
     std::sort(theta_counter.begin(), theta_counter.end(),
               [](const IdScorePair<FLT> &a, const IdScorePair<FLT> &b) {
-                  return fabs(a.score) < fabs(b.score);
+                  return fabsf(a.score) < fabsf(b.score);
               });
     for (NInt i = 0; i < theta_counter.size(); i += 1) {
         index = theta_counter[i].id;
         theta = theta_counter[i].score;
-        used_sum += fabs(V2[index]);
+        used_sum += fabsf(V2[index]);
         if (used_sum > 0.5 || index == -1)
             break;
     }
@@ -51,8 +51,8 @@ inline FLT calc_L1_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pac
     FLT orig_sum = 0;
     FLT diff_sum = 0;
     for (NInt i = 0; i < V1.size(); i++) {
-        orig_sum += fabs(V1[i]);
-        diff_sum += fabs(V1[i] - theta * V2[i] * pace);
+        orig_sum += fabsf(V1[i]);
+        diff_sum += fabsf(V1[i] - theta * V2[i] * pace);
     }
     if (diff_sum > orig_sum)
         return 0;
@@ -77,8 +77,8 @@ inline FLT calc_L2_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pac
     FLT orig_sum = 0;
     FLT diff_sum = 0;
     for (NInt i = 0; i < V1.size(); i++) {
-        orig_sum += fabs(V1[i]);
-        diff_sum += fabs(V1[i] - theta * V2[i] * pace);
+        orig_sum += fabsf(V1[i]);
+        diff_sum += fabsf(V1[i] - theta * V2[i] * pace);
     }
     if (diff_sum > orig_sum)
         return 0;
@@ -98,7 +98,7 @@ inline FLT calc_L1_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
     */
     FLT distance = 0;
     for (NInt i = 0; i < V1.size(); i++) {
-        distance += fabs(V1[i] - V2[i]);
+        distance += fabsf(V1[i] - V2[i]);
     }
     return distance;
 }
@@ -120,22 +120,23 @@ inline FLT calc_L2_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
         sum2 += V2[i] * V2[i];
     }
     // distance = 1 - prd / (sqrt(sum1) * sqrt(sum2));
-    distance = 1 - fabs(prd / (sqrt(sum1) * sqrt(sum2)));
+    distance = 1 - fabsf(prd / (sqrt(sum1) * sqrt(sum2)));
     return distance;
 }
 
 // ==================== Reuse functions
-inline IntVector select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
+inline IntVector select_base(MyMatrix &feat_matrix, MyMatrix &base_matrix) {
+    NInt feat_size = feat_matrix.nrows();
     NInt base_size = base_matrix.nrows();
-    IntVector base_idx(base_size, 0);                                          // index of base features
-    std::vector<IdScorePair<ScoreFlt>> min_counter(feature_matrix.nrows(), {0, 0.0});  // (min base id, min norm) for each feature
+    IntVector base_idx(base_size, 0);                                       // index of base features
+    std::vector<IdScorePair<ScoreFlt>> min_counter(feat_size, {0, 0.0});    // (min base id, min norm) for each feature
     // Find minimum distance feature for each feature
-    for (NInt i = 0; i < feature_matrix.nrows(); i++) {
-        ScoreFlt dis_min = 4.0 * feature_matrix.nrows();
+    for (NInt i = 0; i < feat_size; i++) {
+        ScoreFlt dis_min = 4.0 * feat_size;
         NInt idx_min = -1;
-        for (NInt j = 0; j < feature_matrix.nrows(); j++) {
+        for (NInt j = 0; j < feat_size; j++) {
             if (i != j) {
-                ScoreFlt dis = calc_L2_distance(feature_matrix[i], feature_matrix[j]);
+                ScoreFlt dis = calc_L2_distance(feat_matrix[i], feat_matrix[j]);
                 if (dis_min > dis) {
                     dis_min = dis;
                     idx_min = j;
@@ -143,18 +144,18 @@ inline IntVector select_base(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
             }
         }
         // printf("id: %4d, dis: %.8f, tar: %4d\n", i, dis_min, idx_min);
-        if (idx_min < 0 || idx_min > feature_matrix.nrows()) continue;
+        if (idx_min < 0 || idx_min > feat_size) continue;
         min_counter[idx_min].id = idx_min;
         // Add weight for counter, distance closer to 1 is smaller weight
-        min_counter[idx_min].score += fabs(1 - dis_min);
+        min_counter[idx_min].score += fabsf(1 - dis_min);
     }
 
     // Decide base features with most closest features
     std::sort(min_counter.begin(), min_counter.end(), IdScorePairComparatorGreater<ScoreFlt>());
     for (NInt i = 0; i < base_size; i++) {
         // printf("Base %4d: dis: %.8f, tar: %4d\n", i, min_counter[i].score, min_counter[i].id);
-        base_matrix.set_row(i, feature_matrix[min_counter[i].id]);
-        // base_matrix[i].swap(feature_matrix[min_counter[i].id]);
+        base_matrix.copy_row(i, feat_matrix[min_counter[i].id]);
+        // base_matrix[i].swap(feat_matrix[min_counter[i].id]);
         base_idx[i] = min_counter[i].id;
     }
     return base_idx;

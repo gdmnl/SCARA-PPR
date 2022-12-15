@@ -36,10 +36,10 @@ int main(int argc, char **argv) {
         Base base(graph, param);
         base.push();
         base.show_statistics();
-    // } else if (param.algorithm == "featreuse") {
-    //     Base_reuse base(graph, param);
-    //     base.push();
-    //     base.show_statistics();
+    } else if (param.algorithm == "featreuse") {
+        Base_reuse base(graph, param);
+        base.push();
+        base.show_statistics();
     }
     printf("%s\n", std::string(80, '-').c_str());
     return 0;

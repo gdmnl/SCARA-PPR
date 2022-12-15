@@ -128,10 +128,10 @@ public:
 #ifdef ENABLE_RW
     template<class FLT>
     void calc_ppr_cache(
-                GStruct<FLT> &_gstruct,
-                const std::vector<FLT> &_seeds, const FLT _epsilon,
-                const FLT _alpha, const FLT _lower_threshold,
-                const WalkCache &_walk_cache, const FLT gamma = 1.0) {
+            GStruct<FLT> &_gstruct,
+            const std::vector<FLT> &_seeds, const IntVector &_seeds_ids,
+            const FLT _epsilon, const FLT _alpha, const FLT _lower_threshold,
+            const WalkCache &_walk_cache, const FLT gamma = 1.0) {
         double time_start = getCurrentTime();
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLT>(graph.getNumOfEdges() / (FLT) graph.getNumOfVertices());
@@ -152,12 +152,22 @@ public:
         std::fill(is_active.begin(), is_active.end(), false);
         active_vertices.clear();
 
-        // TODO: loop in Vt_nodes
-        for(int i = 0; i < graph.getNumOfVertices(); i++){
-            if(_seeds[i] != 0.0){
-                active_vertices.push(i);
-                is_active[i] = true;
-                residuals[i] = _seeds[i] * num_walks;
+        if (_seeds_ids.size() == graph.getNumOfVertices()) {
+            for(NInt i = 0; i < graph.getNumOfVertices(); i++){
+                if(_seeds[i] != 0.0){
+                    active_vertices.push(i);
+                    is_active[i] = true;
+                    residuals[i] = _seeds[i] * num_walks;
+                }
+            }
+        } else {
+            for(NInt id = 0; id < _seeds_ids.size(); id++){
+                NInt i = _seeds_ids[id];
+                if(_seeds[i] != 0.0){
+                    active_vertices.push(i);
+                    is_active[i] = true;
+                    residuals[i] = _seeds[i] * num_walks;
+                }
             }
         }
         time_init += getCurrentTime() - time_start;
@@ -221,7 +231,6 @@ public:
         active_vertices.clear();
         std::fill(is_active.begin(), is_active.end(), false);
         for (NInt id = 0; id < numOfVertices; ++id) {
-            // TODO: add abs
             if (fabsf(residuals[id]) >= one_over_one_minus_alpha) {
                 active_vertices.push(id);
                 is_active[id] = true;
@@ -289,9 +298,9 @@ public:
     template<class FLT>
     void calc_ppr_walk(
             GStruct<FLT> &_gstruct,
-            const std::vector<FLT> &_seeds, const FLT _epsilon,
-            const FLT _alpha, const FLT _lower_threshold,
-            const FLT gamma = 1.0) {
+            const std::vector<FLT> &_seeds, const IntVector &_seeds_ids,
+            const FLT _epsilon, const FLT _alpha,
+            const FLT _lower_threshold, const FLT gamma = 1.0) {
         double time_start = getCurrentTime();
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLT>(graph.getNumOfEdges() / (FLT) graph.getNumOfVertices());
@@ -314,12 +323,22 @@ public:
         std::fill(is_active.begin(), is_active.end(), false);
         active_vertices.clear();
 
-        // TODO: loop in Vt_nodes
-        for(int i = 0; i < graph.getNumOfVertices(); i++){
-            if(_seeds[i] != 0.0){
-                active_vertices.push(i);
-                is_active[i] = true;
-                residuals[i] = _seeds[i] * num_walks;
+        if (_seeds_ids.size() == graph.getNumOfVertices()) {
+            for(NInt i = 0; i < graph.getNumOfVertices(); i++){
+                if(_seeds[i] != 0.0){
+                    active_vertices.push(i);
+                    is_active[i] = true;
+                    residuals[i] = _seeds[i] * num_walks;
+                }
+            }
+        } else {
+            for(NInt id = 0; id < _seeds_ids.size(); id++){
+                NInt i = _seeds_ids[id];
+                if(_seeds[i] != 0.0){
+                    active_vertices.push(i);
+                    is_active[i] = true;
+                    residuals[i] = _seeds[i] * num_walks;
+                }
             }
         }
         time_init += getCurrentTime() - time_start;
