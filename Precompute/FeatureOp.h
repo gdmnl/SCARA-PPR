@@ -15,7 +15,7 @@
 
 // ==================== Basic
 template<class FLT>
-inline FLT vector_L1(std::vector<FLT> Vec){
+inline FLT vector_L1(const std::vector<FLT> Vec){
     FLT sum = 0;
     for(FLT a : Vec)
         sum += fabsf(a);
@@ -24,7 +24,7 @@ inline FLT vector_L1(std::vector<FLT> Vec){
 
 // ==================== Vector measurement
 template <class FLT>
-inline FLT calc_L1_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pace = 1.0) {
+inline FLT calc_L1_residue(std::vector<FLT> &V1, const std::vector<FLT> &V2, const float pace = 1.0) {
     NInt index;
     FLT used_sum = 0;
     FLT theta;
@@ -65,7 +65,7 @@ inline FLT calc_L1_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pac
 }
 
 template <class FLT>
-inline FLT calc_L2_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pace = 1.0) {
+inline FLT calc_L2_residue(std::vector<FLT> &V1, const std::vector<FLT> &V2, const float pace = 1.0) {
     FLT prd = 0;
     FLT sum2 = 0;
     for (NInt i = 0; i < V1.size(); i++) {
@@ -91,7 +91,7 @@ inline FLT calc_L2_residue(std::vector<FLT> &V1, std::vector<FLT> &V2, float pac
 }
 
 template <class FLT>
-inline FLT calc_L1_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
+inline FLT calc_L1_distance(const std::vector<FLT> &V1, const std::vector<FLT> &V2) {
     /* Ranges:
         V~[0, 1] -> distance~[0, 1]
         V~[-1, 1] -> distance~[0, 2]
@@ -104,7 +104,7 @@ inline FLT calc_L1_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
 }
 
 template <class FLT>
-inline FLT calc_L2_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
+inline FLT calc_L2_distance(const std::vector<FLT> &V1, const std::vector<FLT> &V2) {
     /* Ranges: (cosine angle = prd / (sqrt(sum1) * sqrt(sum2)))
         V~[0, 1] -> distance~[0, 1]
         V~[-1, 1] -> distance~[0, 2]
@@ -125,9 +125,8 @@ inline FLT calc_L2_distance(std::vector<FLT> &V1, std::vector<FLT> &V2) {
 }
 
 // ==================== Reuse functions
-inline IntVector select_base(MyMatrix &feat_matrix, MyMatrix &base_matrix) {
+inline IntVector select_base(MyMatrix &feat_matrix, const NInt base_size) {
     NInt feat_size = feat_matrix.nrows();
-    NInt base_size = base_matrix.nrows();
     IntVector base_idx(base_size, 0);                                       // index of base features
     std::vector<IdScorePair<ScoreFlt>> min_counter(feat_size, {0, 0.0});    // (min base id, min norm) for each feature
     // Find minimum distance feature for each feature
@@ -154,27 +153,24 @@ inline IntVector select_base(MyMatrix &feat_matrix, MyMatrix &base_matrix) {
     std::sort(min_counter.begin(), min_counter.end(), IdScorePairComparatorGreater<ScoreFlt>());
     for (NInt i = 0; i < base_size; i++) {
         // printf("Base %4d: dis: %.8f, tar: %4d\n", i, min_counter[i].score, min_counter[i].id);
-        base_matrix.copy_row(i, feat_matrix[min_counter[i].id]);
-        // base_matrix[i].swap(feat_matrix[min_counter[i].id]);
         base_idx[i] = min_counter[i].id;
     }
     return base_idx;
 }
 
-template <class FLT>
-inline std::vector<FLT> reuse_weight(std::vector<FLT> &raw_seed, MyMatrix &base_matrix) {
-    std::vector<FLT> base_weight(base_matrix.nrows(), 0.0);
-    for (FLT delta = 1; delta <= 16; delta *= 2) {
-        FLT dis_min = base_matrix.nrows();
+inline FltVector reuse_weight(FltVector &feat_vector, const MyMatrix &base_matrix) {
+    FltVector base_weight(base_matrix.nrows(), 0.0);
+    for (ScoreFlt delta = 1; delta <= 16; delta *= 2) {
+        ScoreFlt dis_min = base_matrix.nrows();
         NInt idx_min = 0;
         for (NInt j = 0; j < base_matrix.nrows(); j++) {
-            FLT dis = calc_L2_distance(raw_seed, base_matrix[j]);
+            ScoreFlt dis = calc_L2_distance(feat_vector, base_matrix[j]);
             if (dis_min > dis) {
                 dis_min = dis;
                 idx_min = j;
             }
         }
-        FLT theta = calc_L2_residue(raw_seed, base_matrix[idx_min], 1.0);
+        ScoreFlt theta = calc_L2_residue(feat_vector, base_matrix[idx_min], 1.0);
         if (fabs(theta) / delta < 1 / 16) break;
         base_weight[idx_min] += theta;
     }

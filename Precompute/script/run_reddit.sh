@@ -1,5 +1,5 @@
 DATASTR=reddit
-ALGOSTR=featpush
+ALGOSTR=featreuse
 SEED=7
 DATADIR=../data/${DATASTR}
 SAVEDIR=../save/${DATASTR}/${ALGOSTR}/${SEED}

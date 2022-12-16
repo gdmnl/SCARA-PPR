@@ -205,6 +205,23 @@ public:
         data[row].resize(ncol+2);
     }
 
+    void copy_rows(const IntVector row_idx, const MyMatrix &_data) {
+        /*
+         * row_idx[i] = j means copy _data[j] to data[i]
+         */
+        assert(row_idx.size() == nrow);
+        for (NInt i = 0; i < row_idx.size(); ++i) {
+            copy_row(i, _data[row_idx[i]]);
+        }
+    }
+
+    void swap_rows(const IntVector row_idx, MyMatrix &_data) {
+        assert(row_idx.size() == nrow);
+        for (NInt i = 0; i < row_idx.size(); ++i) {
+            data[i].swap(_data[row_idx[i]]);
+        }
+    }
+
     void from_V2D(My2DVector matv2d, const IntVector Vt_nodes) {
         data.resize(nrow);
         if (matv2d.ncols() == ncol) {

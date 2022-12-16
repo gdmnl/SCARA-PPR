@@ -11,7 +11,8 @@
 #include "BatchRandomWalk.h"
 #endif
 
-// Wrapper class
+
+// Wrapper class: feat-push
 class Base {
 
 protected:
@@ -37,13 +38,8 @@ public:
     NInt thd_size;              // size of feature per thread
     // statistics
     double time_total = 0;
-    std::vector<double> time_read;
-    std::vector<double> time_write;
-    std::vector<double> time_push;
-    std::vector<double> time_init;
-    std::vector<double> time_fp;
-    std::vector<double> time_it;
-    std::vector<double> time_rw;
+    std::vector<double> time_read, time_write, time_push;
+    std::vector<double> time_init, time_fp, time_it, time_rw;
 
 public:
 
@@ -174,14 +170,15 @@ public:
 };
 
 
+// Feat-reuse: greedy
 class Base_reuse : public Base {
 
 public:
     NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    ScoreFlt avg_tht = 0;       // base theta
-    ScoreFlt avg_res = 0;       // reuse residue
+    ScoreFlt avg_tht = 0;       // average base coefficient
+    ScoreFlt avg_res = 0;       // average reuse residue
     NInt re_feat_num = 0;       // number of reused features
 
 protected:
@@ -196,7 +193,8 @@ public:
             base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
             base_matrix(base_size, V_num),
             base_result(base_size, V_num) {
-        base_idx = select_base(feat_matrix, base_matrix);
+        base_idx = select_base(feat_matrix, base_size);
+        base_matrix.swap_rows(base_idx, feat_matrix);
         printf("Base size: %ld \n", base_result.size());
         time_reuse.resize(thread_num, 0);
     }
@@ -295,6 +293,7 @@ public:
         MSG(avg_res);
         MSG(re_feat_num);
         Base::show_statistics();
+        printf("Reuse Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_reuse), vector_L1(time_reuse) / thread_num);
     }
 
     void push() {

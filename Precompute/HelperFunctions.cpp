@@ -3,6 +3,15 @@
 #include "HelperFunctions.h"
 
 
+// ==================== Runtime measurement
+double getCurrentTime() {
+    long long time = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    return static_cast<double>(time) / 1000000.0;
+//    return clock() / (double) CLOCKS_PER_SEC;
+}
+
+// ==================== Argument parsing
 void ltrim(std::string &_str, const std::string &_chars = "\t\n\v\f\r ") {
     _str.erase(0, _str.find_first_not_of(_chars));
 }
@@ -16,9 +25,7 @@ void trim(std::string &_str, const std::string &_chars = "\t\n\v\f\r ") {
     rtrim(_str, _chars);
 }
 
-/*
- *  Get the index of next unblank char from a string.
- */
+/* Get the index of next unblank char from a string. */
 unsigned int getNextChar(const char *str) {
     unsigned int rtn = 0;
     // Jump over all blanks
@@ -26,23 +33,13 @@ unsigned int getNextChar(const char *str) {
     return rtn;
 }
 
-/*
- *  Get next word from a string.
- */
+/* Get next word from a string. */
 std::string getNextWord(const char *str) {
     // Jump over all blanks
     std::string rtn(str);
     trim(rtn);
     return rtn;
 }
-
-double getCurrentTime() {
-    long long time = std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::steady_clock::now().time_since_epoch()).count();
-    return static_cast<double>(time) / 1000000.0;
-//    return clock() / (double) CLOCKS_PER_SEC;
-}
-
 
 Param param;
 
