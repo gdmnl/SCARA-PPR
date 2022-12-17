@@ -18,6 +18,7 @@ XoshiroGenerator init_rng(uint64_t seed) {
 
 int main(int argc, char **argv) {
     param = parseArgs(argc, argv);
+    std::srand(param.seed);
 #ifdef ENABLE_RW
     fRNG = init_rng(param.seed);
 #endif

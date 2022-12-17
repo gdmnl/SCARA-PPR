@@ -17,6 +17,7 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <random>
 #include <chrono>
 #include <unistd.h>
 #include <malloc.h>

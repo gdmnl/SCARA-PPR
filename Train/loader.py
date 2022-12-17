@@ -89,6 +89,10 @@ def load_data(algo: str, datastr: str, datapath: str,
                     np.concatenate((features, features_spt), axis=0, out=features, dtype=np.float32)
                 print(f'  Split {i} loaded, now shape: {features.shape}')
         features = features.transpose()                 # shape [n, F]
+        print('all head no norm')
+        print(features[:5, :])
+        print('train head no norm ', idx['train'][:5])
+        print(features[idx['train'][:5], :])
 
         # Process degree
         if algo_i.endswith('_train'):
@@ -115,6 +119,8 @@ def load_data(algo: str, datastr: str, datapath: str,
 
     # Assign features
     features = precompute(f'{algo}')
+    print('all head ')
+    print(features[:5, :])
     feat = {'val': torch.FloatTensor(features[idx['val']]),
             'test': torch.FloatTensor(features[idx['test']])}
     if inductive:
@@ -126,10 +132,10 @@ def load_data(algo: str, datastr: str, datapath: str,
         del features
     gc.collect()
 
-    # print('train head ', idx['train'][:5])
-    # print(features[idx['train'][:5], :])
+    print('train head ', idx['train'][:5])
+    print(feat['train'][:5, :])
     # print('test head ', idx['test'][:5])
-    # print(features[idx['test'][:5], :])
+    # print(feat['test'][:5, :])
     # print(labels.size(), labels)
     print(f"n={n}, m={m}, F_t={feat['train'].size()}")
     print(f"n_train={idx['train'].size()}, n_val={idx['val'].size()}, n_test={idx['test'].size()}")

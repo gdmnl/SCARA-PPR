@@ -45,9 +45,9 @@ public:
 
     Base(Graph &_graph, Param &_param) :
             V_num(_graph.getNumOfVertices()),
-            ppr(graph),
+            ppr(_graph),
 #ifdef ENABLE_RW
-            walkCache(graph),
+            walkCache(_graph),
 #endif
             epsilon(_param.epsilon),
             alpha(_param.alpha),
@@ -67,7 +67,7 @@ public:
         // Perform cached random walk
         if (param.index) {
             graph.set_dummy_neighbor(graph.get_dummy_id());
-            walkCache.generate();
+            // walkCache.generate();
             graph.reset_set_dummy_neighbor();
         }
 #endif

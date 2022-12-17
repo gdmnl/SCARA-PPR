@@ -53,8 +53,8 @@ private:
         }
 
         void erase() {
-            parent.data.erase(parent.data.begin() + row * parent.ncol,
-                              parent.data.begin() + (row + 1) * parent.ncol);
+            // parent.data.erase(parent.data.begin() + row * parent.ncol,
+            //                   parent.data.begin() + (row + 1) * parent.ncol);
             parent.nrow--;
             parent.data.resize(parent.nrow * parent.ncol);
         }
@@ -113,10 +113,14 @@ public:
         bool fortran_order;
         data.clear();
         npy::LoadArrayFromNumpy(file_path, shape, fortran_order, data);
+        assert(fortran_order == false && "ERROR: Array should be in C order.");
         nrow = shape[0];    // feature size F
         ncol = shape[1];    // node num Vt_num
         printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
         cout<<"Input file: "<<nrow<<" "<<ncol<<" "<<file_path<<endl;
+        // cout<<data[0]<<" "<<data[1]<<"..."<<data[ncol-2]<<" "<<data[ncol-1]<<endl;
+        // cout<<data[ncol+0]<<" "<<data[ncol+1]<<"..."<<data[2*ncol-2]<<" "<<data[2*ncol-1]<<endl;
+        // cout<<data[(nrow-1)*ncol+0]<<" "<<data[(nrow-1)*ncol+1]<<"..."<<data[nrow*ncol-2]<<" "<<data[nrow*ncol-1]<<endl;
     }
 
     void save_npy(const std::string file_path) {
@@ -209,14 +213,14 @@ public:
         /*
          * row_idx[i] = j means copy _data[j] to data[i]
          */
-        assert(row_idx.size() == nrow);
+        // assert(row_idx.size() == nrow);
         for (NInt i = 0; i < row_idx.size(); ++i) {
             copy_row(i, _data[row_idx[i]]);
         }
     }
 
     void swap_rows(const IntVector row_idx, MyMatrix &_data) {
-        assert(row_idx.size() == nrow);
+        // assert(row_idx.size() == nrow);
         for (NInt i = 0; i < row_idx.size(); ++i) {
             data[i].swap(_data[row_idx[i]]);
         }

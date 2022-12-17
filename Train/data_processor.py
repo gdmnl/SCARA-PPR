@@ -227,8 +227,8 @@ class DataProcess(object):
                 deg_pow = np.power(np.maximum(self.deg, 1e-12), 1 - self.rrz)
                 deg_pow = diag_sp(deg_pow).astype(np.float32)
                 self.attr_matrix_norm = deg_pow @ matstd(self.attr_matrix)
-                self.attr_matrix_norm = matnorm_inf_dual(self.attr_matrix_norm)
-                self.attr_matrix_norm = self.attr_matrix_norm.astype(np.float32).transpose()
+                self.attr_matrix_norm = matnorm_inf_dual(self.attr_matrix_norm).astype(np.float32)
+                self.attr_matrix_norm = self.attr_matrix_norm.transpose().astype(np.float32, order='C')
             else:
                 print("Key not exist: {}".format(key))
 
