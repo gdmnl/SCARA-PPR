@@ -12,7 +12,6 @@
 #include "BasicDefinition.h"
 #include "MyType.h"
 
-const ScoreFlt TOL = 1e-2;
 
 /*
  * Randomized SVD for fast approximate matrix decomposition
@@ -25,13 +24,24 @@ public:
         ComputeRandomizedSvd(m, oversamples, iter);
     }
 
-    ScoreVector singularValues() { return S_; }
-    ScoreMatrix matrixU() { return U_; }
-    ScoreMatrix matrixV() { return V_; }
+    ScoreVector singularValues() { return S_; }     // shape: rank
+    ScoreMatrix matrixU() { return U_; }            // shape: m.rows * rank
+    ScoreMatrix matrixV() { return V_; }            // shape: m.cols * rank
+
+    ScoreMatrix pinv() {                            // shape: m.cols * m.rows
+        ScoreVector Sinv(S_.size());
+        for (int i = 0; i < S_.size(); ++i) {
+            Sinv(i) = (S_(i) > 1e-6) ? (1.0/S_(i)) : 0.0;
+        }
+        // if ((Sinv.array() == 0).count() > 0)
+        //     std::cout << "Warning: SVD matrix is singular" << std::endl;
+        return V_ * Sinv.asDiagonal() * U_.transpose();
+    }
 
 private:
     ScoreMatrix U_, V_;
     ScoreVector S_;
+    ScoreFlt TOL = 1e-6;
     int rank_;
 
     /*
@@ -92,23 +102,46 @@ private:
  * Separates a matrix into two-components: low-rank and sparse
  */
 class RobustPca {
+private:
+    ScoreMatrix M, L, S;
+    ScoreFlt nr, nc, spe_norm, fro_norm, l1_norm, errmin, mul;
+    ScoreFlt TOL = 1e-3;
+    bool trans;
+
 public:
-    RobustPca(ScoreMatrix M, int rank = 1, int maxiter = 5, int k = 1) : L(), S() {
-        ComputeRobustPca(M, rank, maxiter, k);
+    RobustPca(const ScoreMatrix _M, const ScoreFlt _mul = 4.0) :
+            M(_M), mul((_mul > 4) ? _mul : 4.0) {
+        trans = (M.rows() < M.cols());
+        if (trans) {
+            cout<<"! Transposing matrix"<<endl;
+            M.transposeInPlace();
+        }
+        nr = M.rows();                              // dimension of sample
+        nc = M.cols();                              // dimension of feature
+        L = ScoreMatrix::Zero(nr, nc);
+        S = ScoreMatrix::Zero(nr, nc);
+
+        spe_norm = norm_op(M);                      // matrix spectral norm
+        fro_norm = M.norm();                        // matrix frobenius norm
+        // l1_norm = M.cwiseAbs().colwise().sum().maxCoeff();   // matrix l1 norm
+        l1_norm = M.lpNorm<1>();                    // coefficient-wise l1 norm
+        cout<< "L1 norm: "<<M.cwiseAbs().colwise().sum().maxCoeff() <<" Abs norm: "<<M.lpNorm<1>() << endl;
+        errmin = TOL * fro_norm;
     }
 
-    ScoreMatrix LowRankComponent() { return L; }
-    ScoreMatrix SparseComponent() { return S; }
+    ScoreMatrix LowRankComponent() { return (trans? L.transpose() : L ); }
+
+    ScoreMatrix SparseComponent()  { return (trans? S.transpose() : S ); }
 
     // Encourages sparsity in M by slightly shrinking all values, thresholding small values to zero
-    void shrink(const ScoreMatrix& M, ScoreFlt tau, ScoreMatrix& S) {
-        ScoreMatrix S0 = M.cwiseAbs() - tau * ScoreMatrix::Ones(M.rows(), M.cols());
-        S = (S0.array() > 0).select(M, ScoreMatrix::Zero(M.rows(), M.cols()));
+    void shrink(const ScoreMatrix& X, ScoreFlt tau, ScoreMatrix& S) {
+        ScoreMatrix S0 = X.cwiseAbs() - tau * ScoreMatrix::Ones(X.rows(), X.cols());
+        S = (S0.array() > 0).select(X, ScoreMatrix::Zero(X.rows(), X.cols()));
     }
 
     // Encourages low-rank by taking (truncated) SVD, then setting small singular values to zero
-    int svd_truncate(const ScoreMatrix& M, int rank, ScoreFlt min_sv, ScoreMatrix& L) {
-        RandomizedSvd rsvd(M, rank, (int)ceil(0.2*rank)+1, 1);
+    int svd_truncate(const ScoreMatrix& X, int rank, ScoreFlt min_sv, ScoreMatrix& L) {
+        RandomizedSvd rsvd(X, rank, (int)ceil(0.2*rank)+1, 1);
         ScoreVector s  = rsvd.singularValues();
         ScoreVector s0 = s.cwiseAbs() - min_sv * ScoreVector::Ones(s.size());
         int nnz = (s0.array() > 0).count();
@@ -123,43 +156,24 @@ public:
         return rsvd.singularValues()[0];
     }
 
-private:
-    ScoreMatrix L, S;
-    ScoreFlt nr, nc;
-
     /*
+     * mul: threshold multiplier, larger mul = more sparse but larger error
      * k: L2 mu stepsize, larger k = less sparse but faster convergence
      */
-    void ComputeRobustPca(ScoreMatrix& M, int rank, int maxiter, int k) {
-        bool trans = (M.rows() < M.cols());
-        if (trans) {
-            cout<<"! Transposing matrix"<<endl;
-            M.transposeInPlace();
-        }
-        nr = M.rows();      // dimension of sample
-        nc = M.cols();      // dimension of feature
-
-        ScoreFlt lambda = sqrt(nr / (rank * nc));
-        ScoreFlt op_norm = norm_op(M);
-        ScoreFlt d_norm = M.norm();
-        // ScoreFlt l1_norm = M.cwiseAbs().colwise().sum().maxCoeff();
-        ScoreFlt l1_norm = M.lpNorm<1>();
-        // cout<< "L1 norm: "<<M.cwiseAbs().colwise().sum().maxCoeff() <<" Abs norm: "<<M.lpNorm<1>() << endl;
-
-        // ScoreFlt mu = k * 1.25 / op_norm;
+    void fit(const int rank = 1, const int maxiter = 5, const ScoreFlt k = 1.0) {
+        ScoreFlt lambda = mul * rank / (4 * sqrt(nr + nc));
         ScoreFlt mu = k * nc * nr / (4 * l1_norm);
         ScoreFlt mu_bar = mu / TOL;
         ScoreFlt rho = k * 1.5;
-        ScoreFlt init_scale = std::max(op_norm, M.lpNorm<Eigen::Infinity>()) * lambda;
+        ScoreFlt init_scale = std::max(spe_norm, M.lpNorm<Eigen::Infinity>()) * lambda;
         ScoreMatrix Z = M / init_scale;
         ScoreMatrix M2;
 
-        S = ScoreMatrix::Zero(nr, nc);
         const int sv_step = std::max(1, (int)ceil(rank / maxiter));
         int sv = sv_step;
 
         for (int i = 0; i < maxiter; ++i) {
-            // cout<<"rank: "<<sv<<", r: "<<lambda/mu<<", s: "<<1/mu<<", ";
+            cout<<"rank: "<<sv<<", r: "<<lambda/mu<<". s: "<<1/mu<<", ";
             M2 = M + Z / mu;
             /* update estimate of low-rank component */
             int svp = svd_truncate(M2 - S, sv, 1/mu, L);
@@ -170,8 +184,8 @@ private:
             /* compute residual */
             ScoreMatrix Zi = M - L - S;
             ScoreFlt err = Zi.norm();
-            // cout << "err: "<<err/d_norm << " Abs: "<<S.lpNorm<1>() << endl;
-            if (err < TOL * d_norm) {
+            cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
+            if (err < errmin) {
                 break;
             }
 
@@ -182,10 +196,42 @@ private:
         // M2 = M + Z / mu;
         // svd_truncate(M2 - S, rank, 1/mu, L);
         // shrink(M2 - L, lambda/mu, S);
-        if (trans) {
-            L.transposeInPlace();
-            S.transposeInPlace();
+    }
+
+    ScoreMatrix fit_fixed(const ScoreMatrix B, const int maxiter = 5, const ScoreFlt k = 1.0) {
+        int rank = B.cols();
+        ScoreFlt lambda = mul * rank / (4 * sqrt(nr + nc));
+        ScoreFlt mu = k * nc * nr / (4 * l1_norm);
+        ScoreFlt mu_bar = mu / TOL;
+        ScoreFlt rho = k * 1.5;
+        ScoreFlt init_scale = std::max(spe_norm, M.lpNorm<Eigen::Infinity>()) * lambda;
+        ScoreMatrix Z = M / init_scale;
+        ScoreMatrix M2, Theta;
+
+        RandomizedSvd Bsvd(B, rank);
+        ScoreMatrix Binv = Bsvd.pinv();
+
+        for (int i = 0; i < maxiter; ++i) {
+            cout<<"r: "<<lambda/mu<<", ";
+            M2 = M + Z / mu;
+            /* update estimate of low-rank component */
+            Theta = Binv * (M2 - S);
+            L = B * Theta;
+            /* update estimate of sparse component */
+            shrink(M2 - L, lambda/mu, S);
+
+            /* compute residual */
+            ScoreMatrix Zi = M - L - S;
+            ScoreFlt err = Zi.norm();
+            cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
+            if (err < TOL * fro_norm) {
+                break;
+            }
+
+            Z += mu * Zi;
+            mu = (mu * rho < mu_bar) ? mu * rho : mu_bar;
         }
+        return Binv * (M - S);
     }
 };
 

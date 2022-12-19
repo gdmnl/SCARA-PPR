@@ -142,24 +142,25 @@ public:
  */
 class MyMatrix {
 private:
+    NInt nrow = 0;                  // number of vectors
+    NInt ncol = 0;                  // size of each vector
+    NInt tail = 0;                  // empty tail elements at the end of each row
     std::vector<FltVector> data;
-    NInt nrow = 0;
-    NInt ncol = 0;
 
 public:
-    explicit MyMatrix() {}
+    explicit MyMatrix(const NInt _tail = 0) : tail(_tail) {}
 
-    explicit MyMatrix(const NInt &_nrows, const NInt &_ncols) :
-        data(_nrows, FltVector(_ncols+2)),
+    explicit MyMatrix(const NInt _nrows, const NInt _ncols, const NInt _tail = 0) :
         nrow(_nrows),
-        ncol(_ncols) {
-    }
+        ncol(_ncols),
+        tail(_tail),
+        data(_nrows, FltVector(_ncols+_tail)) {}
 
     void allocate(const NInt &_nrows, const NInt &_ncols) {
         // data.resize(_nrows, FltVector(_ncols, 0));
-        data = std::vector<FltVector>(_nrows, FltVector(_ncols+2));
         nrow = _nrows;
         ncol = _ncols;
+        data = std::vector<FltVector>(_nrows, FltVector(_ncols+tail));
     }
 
     FltVector &operator[] (const NInt &row) {
@@ -180,17 +181,15 @@ public:
         return nrow == 0;
     }
 
-    inline bool is_regular() const {
-        for (NInt i = 0; i < nrow; ++i) {
-            if (data[i].size() != ncol) {
-                return false;
-            }
-        }
-        return true;
+    inline bool is_regular(const NInt &row) const {
+        return data[row].size() == ncol+tail;
     }
 
-    inline bool is_regular(const NInt &row) const {
-        return data[row].size() == ncol;
+    inline bool is_regular() const {
+        for (NInt i = 0; i < nrow; ++i)
+            if (!is_regular(i))
+                return false;
+        return true;
     }
 
     inline void set_size(const NInt &_nrow, const NInt &_ncol) {
@@ -212,7 +211,7 @@ public:
 
     inline void copy_row(const NInt &row, const FltVector &_data) {
         data[row] = _data;
-        data[row].resize(ncol+2);
+        data[row].resize(ncol+tail);
     }
 
     void copy_rows(const IntVector row_idx, const MyMatrix &_data) {
@@ -238,9 +237,9 @@ public:
             for (long i = nrow-1; i >= 0; --i) {
                 data[i] = FltVector(std::make_move_iterator(matv2d[i].begin()),
                                     std::make_move_iterator(matv2d[i].end()) );
-                // NOTE: Actual size of data[i] is V_num+2 to be in line with SpeedPPR::gstruct.means
-                data[i].emplace_back(0);
-                data[i].emplace_back(0);
+                // append `tail` elements at end to be in line with SpeedPPR::gstruct.means
+                for (NInt j = 0; j < tail; ++j)
+                    data[i].emplace_back(0);
                 matv2d[i].erase();
             }
         } else {
@@ -248,7 +247,7 @@ public:
             assert(matv2d.ncols() == Vt_nodes.size());
             NInt idx = 0;
             for (long i = nrow-1; i >= 0; --i) {
-                data[i] = FltVector(ncol+2, 0);
+                data[i] = FltVector(ncol+tail, 0);
                 for (NInt j = 0; j < ncol; ++j) {
                     if (Vt_nodes[idx] == j) {
                         data[i][j] = matv2d[i][idx];
@@ -261,14 +260,14 @@ public:
         matv2d.clear();
         // ! Still require O(2n) RAM as My2DVectorRow::erase does not reallocate
         printf("Mat    RSS RAM: %.3f GB\n", get_stat_memory());
-        cout<<"Feat  size: "<<data.size()<<" "<<data[0].size()-2<<endl;
+        cout<<"Feat  size: "<<data.size()<<" "<<data[0].size()-tail<<endl;
     }
 
     void to_V2D(My2DVector &matv2d) {
         matv2d.clear();
         matv2d.set_ncol(ncol);
         for (NInt i = 0; i < nrow; ++i) {
-            matv2d.emplace_row(data[i].begin(), data[i].end()-2);
+            matv2d.emplace_row(data[i].begin(), data[i].end()-tail);
             data[i].clear();
         }
         cout<<"Save  size: "<<matv2d.nrows()<<" "<<matv2d.ncols()<<" "<<matv2d.get_data().size()<<endl;
@@ -276,12 +275,16 @@ public:
 
     ScoreMatrix to_Eigen(const IntVector Vt_nodes) {
         ScoreMatrix mat(nrow, Vt_nodes.size());
-        for (NInt i = 0; i < nrow; ++i) {
-            for (NInt j = 0; j < Vt_nodes.size(); ++j) {
+        for (NInt i = 0; i < nrow; ++i)
+            for (NInt j = 0; j < Vt_nodes.size(); ++j)
                 mat(i, j) = data[i][Vt_nodes[j]];
-            }
-        }
         return mat;
+    }
+
+    void from_Eigen(const ScoreMatrix &mat) {
+        // data.resize(nrow);
+        for (NInt i = 0; i < nrow; ++i)
+            ScoreVectorMap(data[i].data(), ncol) = mat.row(i);
     }
 };
 

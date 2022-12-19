@@ -39,10 +39,12 @@ int main(int argc, char **argv) {
         base.show_statistics();
     } else if (param.algorithm == "featreuse") {
         Base_reuse base(graph, param);
+        base.fit();
         base.push();
         base.show_statistics();
     } else if (param.algorithm == "featpca") {
         Base_pca base(graph, param);
+        base.fit();
         // base.push();
         // base.show_statistics();
     }

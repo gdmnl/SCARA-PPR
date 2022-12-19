@@ -49,6 +49,7 @@ public:
 #ifdef ENABLE_RW
             walkCache(_graph),
 #endif
+            feat_matrix(2),
             epsilon(_param.epsilon),
             alpha(_param.alpha),
             lower_threshold(1.0 / _graph.getNumOfVertices()),
@@ -182,6 +183,7 @@ public:
     NInt re_feat_num = 0;       // number of reused features
 
 protected:
+    ScoreFlt gamma;
     IntVector base_idx;         // index of base features
     MyMatrix base_matrix;       // matrix of base features
     MyMatrix base_result;       // output result (on all features and nodes)
@@ -190,13 +192,17 @@ public:
 
     Base_reuse(Graph &_graph, Param &_param) :
             Base(_graph, _param),
+            gamma(_param.gamma),
             base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
-            base_matrix(base_size, V_num),
-            base_result(base_size, V_num) {
+            base_matrix(base_size, V_num, 2),
+            base_result(base_size, V_num, 2) {
+        time_reuse.resize(thread_num, 0);
+    }
+
+    void fit() {
         base_idx = select_base(feat_matrix, base_size);
         base_matrix.swap_rows(base_idx, feat_matrix);
-        printf("Base size: %ld \n", base_result.size());
-        time_reuse.resize(thread_num, 0);
+        cout<<"Base  size: "<<base_result.nrows()<<" "<<base_result.ncols()<<" "<<base_result.size()<<endl;
     }
 
     void push_one_base(const NInt idx, const NInt tid, SpeedPPR::GStruct<ScoreFlt> &_gstruct) {
@@ -204,11 +210,11 @@ public:
         double time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, param.gamma);
+            ppr.calc_ppr_cache(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, gamma);
         else
-            ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, param.gamma);
+            ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, gamma);
 #else
-        ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, param.gamma);
+        ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
@@ -254,11 +260,11 @@ public:
         time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, 2 - theta_sum * gamma);
         else
-            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * gamma);
 #else
-        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * param.gamma);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[i], Vt_nodes, epsilon, alpha, lower_threshold, 2 - theta_sum * gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
@@ -353,34 +359,24 @@ public:
 };
 
 // Feat-reuse: PCA
-class Base_pca : public Base {
-public:
-    NInt base_size;
-    // statistics
-    std::vector<double> time_reuse;
-    ScoreFlt avg_tht = 0;       // base theta
-    ScoreFlt avg_res = 0;       // reuse residue
-    NInt re_feat_num = 0;       // number of reused features
-
+class Base_pca : public Base_reuse {
 protected:
-    IntVector base_idx;         // index of base features
     MyMatrix theta_matrix;      // matrix of principal directions
-    MyMatrix base_matrix;       // matrix of principal components
-    MyMatrix base_result;       // output result (on all features and nodes)
 
 public:
 
     Base_pca (Graph &_graph, Param &_param) :
-            Base(_graph, _param),
-            base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
-            base_matrix(base_size, V_num),
-            base_result(base_size, V_num) {
-        IntVector   Vs_nodes = sample_nodes(Vt_nodes, std::max(NInt (3u), NInt (V_num * param.base_ratio)));
+            Base_reuse(_graph, _param),
+            theta_matrix(feat_size, base_size) {}
+
+    void fit() {
+        ScoreFlt avg_degree = graph.getNumOfEdges() / (ScoreFlt) graph.getNumOfVertices() / 2;
+        NInt        Vs_num = std::max(3*base_size, NInt (V_num*param.base_ratio));
+        IntVector   Vs_nodes = sample_nodes(Vt_nodes, Vs_num);
         ScoreMatrix feat_sample_matrix = feat_matrix.to_Eigen(Vs_nodes);
-        base_idx = select_pc(feat_sample_matrix, theta_matrix, base_size);
-        // base_matrix.swap_rows(base_idx, feat_matrix);
+        base_idx = select_pc(feat_sample_matrix, theta_matrix, base_size, sqrt(avg_degree));
+        base_matrix.swap_rows(base_idx, feat_matrix);
         cout<<"Base  size: "<<base_result.nrows()<<" "<<base_result.ncols()<<" "<<base_result.size()<<endl;
-        time_reuse.resize(thread_num, 0);
     }
 
 };
