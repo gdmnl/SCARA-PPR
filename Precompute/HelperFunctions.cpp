@@ -45,7 +45,7 @@ Param param;
 
 Param parseArgs(int nargs, char **args) {
     std::vector<std::string> Algorithms{
-        "featpush", "featreuse",
+        "featpush", "featreuse", "featpca",
     };
 
     Param rtn;

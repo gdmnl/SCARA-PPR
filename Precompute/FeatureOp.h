@@ -9,8 +9,8 @@
 #include <iostream>
 #include <cmath>
 #include "BasicDefinition.h"
-#include "HelperFunctions.h"
 #include "MyType.h"
+#include "FeatureDecomp.h"
 
 
 // ==================== Basic
@@ -20,6 +20,27 @@ inline FLT vector_L1(const std::vector<FLT> Vec){
     for(FLT a : Vec)
         sum += fabsf(a);
     return sum;
+}
+
+template<class FLT>
+inline IntVector arg_kmax(const std::vector<FLT> &Vec, const NInt k) {
+    std::priority_queue<std::pair<FLT, NInt>,
+                        std::vector< std::pair<FLT, NInt> >,
+                        std::less<std::pair<FLT, NInt> >> q;
+    for(NInt i = 0; i < Vec.size(); i++){
+        if (q.size() < k)
+            q.push({Vec[i], i});
+        else if(Vec[i] < q.top().first){
+            q.pop();
+            q.push({Vec[i], i});
+        }
+    }
+    IntVector res(k);
+    for(NInt i = 0; i < k; i++){
+        res[i] = q.top().second;
+        q.pop();
+    }
+    return res;
 }
 
 // ==================== Vector measurement
@@ -177,13 +198,70 @@ inline FltVector reuse_weight(FltVector &feat_vector, const MyMatrix &base_matri
     return base_weight;
 }
 
-inline MyMatrix select_pc(MyMatrix &feature_matrix, MyMatrix &base_matrix) {
-    NInt feat_size = feature_matrix.nrows();
-    NInt Vt_num    = feature_matrix.ncols();
-    NInt base_size = base_matrix.nrows();
-    MyMatrix theta_matrix(feat_size, base_size);
-    // TODO: https://github.com/kazuotani14/RandomizedSvd; https://github.com/kartikey-vyas/fast-pca
-    return theta_matrix;
+// ==================== Decomposition functions
+inline IntVector sample_nodes(const IntVector Vt_nodes, NInt Vs_num) {
+    // IntVector Vs_nodes(Vt_nodes);
+    // NInt Vs_num_real(std::min(Vs_num, (NInt)Vt_nodes.size()));
+    // std::shuffle(Vs_nodes.begin(), Vs_nodes.end(), std::mt19937(param.seed));
+    // Vs_nodes.resize(Vs_num_real);
+    IntVector Vs_nodes(9320);
+    std::iota(Vs_nodes.begin(), Vs_nodes.end(), 0);
+    return Vs_nodes;
+}
+
+inline IntVector select_pc(ScoreMatrix &feat_Matrix, MyMatrix &theta_matrix, const NInt base_size) {
+    NInt feat_size = feat_Matrix.rows();
+    NInt V_num     = feat_Matrix.cols();
+    assert(feat_size < V_num && "ERROR: Feature size should be smaller than sampled vertex number");
+    feat_Matrix.transposeInPlace();                         // feat_matrix: Vs_num * feat_size
+
+    // PCA to get sparse residue
+    double time_start = getCurrentTime();
+    RobustPca Rpca(feat_Matrix, base_size);
+    double time_pca = getCurrentTime() - time_start;
+    ScoreMatrix diff = feat_Matrix - Rpca.LowRankComponent();
+    // cout<<"lr: \n"<<Rpca.LowRankComponent().topLeftCorner(3, 5)<<endl;
+    // cout<<"res: \n"<<Rpca.SparseComponent().topLeftCorner(3, 5)<<endl;
+    cout<< "res Fro norm: "<<Rpca.SparseComponent().norm() <<" Abs norm: "<<Rpca.SparseComponent().lpNorm<1>() << endl;
+    // cout<<"diff: \n"<<diff.topLeftCorner(3, 5)<<endl;
+    cout<< "diff Fro norm: "<<diff.norm() <<" Abs norm: "<<diff.lpNorm<1>() << endl;
+    RandomizedSvd Rsvd_feat(Rpca.LowRankComponent(), base_size);
+    ScoreMatrix theta_Matrix_ = Rsvd_feat.matrixV();        // theta_matrix: feat_size * base_size
+    ScoreMatrix Y1 = Rsvd_feat.matrixU() * Rsvd_feat.singularValues().asDiagonal();
+    cout<< "singular values: "<<Rsvd_feat.singularValues().transpose() << endl;
+    printf("PCA Time: %.6f\n", time_pca);
+
+    // Select base features (columns) by minimum residue
+    ScoreVector feat_Res_ = Rpca.SparseComponent().colwise().norm();
+    FltVector feat_res(feat_Res_.data(), feat_Res_.data() + feat_Res_.size());
+    IntVector base_idx = arg_kmax(feat_res, base_size);
+    ScoreMatrix base_Matrix = feat_Matrix(Eigen::all, base_idx);
+    std::sort(base_idx.begin(), base_idx.end());
+    for (NInt i = 0; i < 5; i++) {
+        cout<<base_idx[i]<<" "<<feat_res[base_idx[i]]<<endl;
+    }
+
+    // Get coefficient matrix
+    // theta_Matrix_ = theta_Matrix_ * theta_Matrix_(base_idx, Eigen::all).inverse();
+    // RandomizedSvd Rsvd_base(base_Matrix, base_size);
+    // cout<< "singular values: "<<Rsvd_base.singularValues().transpose() << endl;
+    // theta_Matrix_ = theta_Matrix_ * Rsvd_base.matrixV().inverse();
+
+    ScoreMatrix Y2 = Rpca.LowRankComponent()(Eigen::all, base_idx) * theta_Matrix_(base_idx, Eigen::all).inverse();
+    std::ofstream file1("output_y1.txt");
+    file1 << Y1.topRows(10).transpose();
+    std::ofstream file2("output_y2.txt");
+    file2 << Y2.topRows(10).transpose();
+    // std::ofstream file1("output_theta.txt");
+    // file1 << theta_Matrix_;
+    // std::ofstream file2("output_feat.txt");
+    // file2 << feat_Matrix.topRows(10).transpose();
+    // diff = feat_Matrix - base_Matrix * theta_Matrix_.transpose();
+    // std::ofstream file("output.txt");
+    // file << diff.topRows(10).transpose();
+    // cout<< "diff Fro norm: "<<diff.norm() <<" Abs norm: "<<diff.lpNorm<1>() << endl;
+
+    return base_idx;
 }
 
 #endif  // SCARA_FEATUREOP_H

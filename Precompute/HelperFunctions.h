@@ -76,35 +76,6 @@ extern Param param;
 extern Param parseArgs(int nargs, char **args);
 
 // ==================== IO
-/*
-Assign vector value from _data to _target:
-    If _data.size == _target.size: allow swap() for fast assign if _data no longer used
-    If _data.size <  _target.size: assign value according to _mapping, other values are set to 0
-*/
-template<class FLT>
-inline void propagate_vector(std::vector<FLT> &_data, std::vector<FLT> &_target,
-    const IntVector &_mapping, const NInt &target_size, bool swap = false) {
-    if (target_size == _data.size()) {
-        if (swap) {
-            _data.swap(_target);
-        } else {
-            if (_target.empty()) {
-                _target.reserve(target_size);
-            }
-            std::copy(_data.begin(), _data.end(), _target.begin());
-        }
-    } else {
-        if (_target.empty()) {
-            _target.resize(target_size, 0.0);
-        } else {
-            std::fill(_target.begin(), _target.end(), 0.0);
-        }
-        for (NInt j = 0; j < _data.size(); j++) {
-            _target[_mapping[j]] = _data[j];
-        }
-    }
-}
-
 inline size_t load_query(IntVector &Vt_nodes, std::string query_path, const NInt &V_num){
     // By default use all nodes
     if (query_path.empty()) {

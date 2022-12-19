@@ -41,6 +41,10 @@ int main(int argc, char **argv) {
         Base_reuse base(graph, param);
         base.push();
         base.show_statistics();
+    } else if (param.algorithm == "featpca") {
+        Base_pca base(graph, param);
+        // base.push();
+        // base.show_statistics();
     }
     printf("%s\n", std::string(80, '-').c_str());
     return 0;

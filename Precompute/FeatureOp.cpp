@@ -352,32 +352,35 @@ public:
 
 };
 
-/*
+// Feat-reuse: PCA
 class Base_pca : public Base {
 public:
     NInt base_size;
     // statistics
     std::vector<double> time_reuse;
-    ScoreFlt avg_tht = 0;      // base theta
-    ScoreFlt avg_res = 0;      // reuse residue
+    ScoreFlt avg_tht = 0;       // base theta
+    ScoreFlt avg_res = 0;       // reuse residue
     NInt re_feat_num = 0;       // number of reused features
 
 protected:
-    MyMatrix theta_matrix;              // matrix of principal directions
-    MyMatrix base_matrix;               // matrix of principal components
-    MyMatrix base_result;               // output result (on all features and nodes)
+    IntVector base_idx;         // index of base features
+    MyMatrix theta_matrix;      // matrix of principal directions
+    MyMatrix base_matrix;       // matrix of principal components
+    MyMatrix base_result;       // output result (on all features and nodes)
 
 public:
 
     Base_pca (Graph &_graph, Param &_param) :
             Base(_graph, _param),
             base_size(std::max(NInt (3u), NInt (feat_size * param.base_ratio))),
-            base_matrix(base_size, Vt_num),
+            base_matrix(base_size, V_num),
             base_result(base_size, V_num) {
-        theta_matrix = select_pc(feature_matrix, base_matrix);
-        printf("Base size: %ld \n", base_result.size());
+        IntVector   Vs_nodes = sample_nodes(Vt_nodes, std::max(NInt (3u), NInt (V_num * param.base_ratio)));
+        ScoreMatrix feat_sample_matrix = feat_matrix.to_Eigen(Vs_nodes);
+        base_idx = select_pc(feat_sample_matrix, theta_matrix, base_size);
+        // base_matrix.swap_rows(base_idx, feat_matrix);
+        cout<<"Base  size: "<<base_result.nrows()<<" "<<base_result.ncols()<<" "<<base_result.size()<<endl;
         time_reuse.resize(thread_num, 0);
     }
 
 };
-*/

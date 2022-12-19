@@ -12,6 +12,12 @@
 #include "npy.hpp"
 #include "BasicDefinition.h"
 
+typedef Eigen::Matrix<NInt, Eigen::Dynamic, 1> NodeVector;
+typedef Eigen::Map<NodeVector> NodeMap;
+typedef Eigen::Ref<NodeVector> NodeRef;
+typedef Eigen::Matrix<ScoreFlt, Eigen::Dynamic, 1> ScoreVector;
+typedef Eigen::Map<ScoreVector> ScoreVectorMap;
+typedef Eigen::Ref<ScoreVector> ScoreVectorRef;
 typedef Eigen::Matrix<ScoreFlt, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ScoreMatrix;
 typedef Eigen::Map<ScoreMatrix> ScoreMap;
 typedef Eigen::Ref<ScoreMatrix> ScoreRef;
@@ -266,6 +272,16 @@ public:
             data[i].clear();
         }
         cout<<"Save  size: "<<matv2d.nrows()<<" "<<matv2d.ncols()<<" "<<matv2d.get_data().size()<<endl;
+    }
+
+    ScoreMatrix to_Eigen(const IntVector Vt_nodes) {
+        ScoreMatrix mat(nrow, Vt_nodes.size());
+        for (NInt i = 0; i < nrow; ++i) {
+            for (NInt j = 0; j < Vt_nodes.size(); ++j) {
+                mat(i, j) = data[i][Vt_nodes[j]];
+            }
+        }
+        return mat;
     }
 };
 
