@@ -34,19 +34,19 @@ int main(int argc, char **argv) {
 
     // Perfrom feature operations
     if (param.algorithm == "featpush"){
-        Base base(graph, param);
-        base.push();
-        base.show_statistics();
+        FeatProc proc(graph, param);
+        proc.push();
+        proc.show_statistics();
     } else if (param.algorithm == "featreuse") {
-        Base_reuse base(graph, param);
-        base.fit();
-        base.push();
-        base.show_statistics();
+        FeatProc_greedy proc(graph, param);
+        proc.fit();
+        proc.push();
+        proc.show_statistics();
     } else if (param.algorithm == "featpca") {
-        Base_pca base(graph, param);
-        base.fit();
-        // base.push();
-        // base.show_statistics();
+        FeatProc_pca proc(graph, param);
+        proc.fit();
+        proc.push();
+        proc.show_statistics();
     }
     printf("%s\n", std::string(80, '-').c_str());
     return 0;

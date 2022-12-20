@@ -23,6 +23,14 @@ inline FLT vector_L1(const std::vector<FLT> Vec){
 }
 
 template<class FLT>
+inline FLT vector_L2(const std::vector<FLT> Vec){
+    FLT sum = 0;
+    for(FLT a : Vec)
+        sum += a * a;
+    return sqrtf(sum);
+}
+
+template<class FLT>
 inline IntVector arg_kmax(const std::vector<FLT> &Vec, const NInt k) {
     std::priority_queue<std::pair<FLT, NInt>,
                         std::vector< std::pair<FLT, NInt> >,
@@ -94,6 +102,8 @@ inline FLT calc_L2_residue(std::vector<FLT> &V1, const std::vector<FLT> &V2, con
         sum2 += V2[i] * V2[i];
     }
     FLT theta = prd / sum2;
+    if (fabs(theta * pace) < 1e-4)
+        return 0;
 
     FLT orig_sum = 0;
     FLT diff_sum = 0;
@@ -200,24 +210,22 @@ inline FltVector reuse_weight(FltVector &feat_vector, const MyMatrix &base_matri
 
 // ==================== Decomposition functions
 inline IntVector sample_nodes(const IntVector Vt_nodes, NInt Vs_num) {
-    // IntVector Vs_nodes(Vt_nodes);
-    // NInt Vs_num_real(std::min(Vs_num, (NInt)Vt_nodes.size()));
-    // std::shuffle(Vs_nodes.begin(), Vs_nodes.end(), std::mt19937(param.seed));
-    // Vs_nodes.resize(Vs_num_real);
-    IntVector Vs_nodes(9320);
-    std::iota(Vs_nodes.begin(), Vs_nodes.end(), 0);
+    IntVector Vs_nodes(Vt_nodes);
+    NInt Vs_num_real(std::min(Vs_num, (NInt)Vt_nodes.size()));
+    std::shuffle(Vs_nodes.begin(), Vs_nodes.end(), std::mt19937(param.seed));
+    Vs_nodes.resize(Vs_num_real);
     return Vs_nodes;
 }
 
 inline IntVector select_pc(ScoreMatrix &feat_Matrix, MyMatrix &theta_matrix,
-                           const NInt base_size, const ScoreFlt eps) {
+                           const NInt base_size, const ScoreFlt mul) {
     NInt feat_size = feat_Matrix.rows();
     NInt V_num     = feat_Matrix.cols();
     assert(feat_size < V_num && "ERROR: Feature size should be smaller than sampled vertex number");
     feat_Matrix.transposeInPlace();                                 // feat_Matrix: Vs_num * feat_size
 
     // Select base features (columns) by minimum residue
-    RobustPca Rpca(feat_Matrix, eps);
+    RobustPca Rpca(feat_Matrix, mul);
     Rpca.fit(base_size);
     ScoreVector feat_Res_ = Rpca.SparseComponent().colwise().norm();
     FltVector feat_res(feat_Res_.data(), feat_Res_.data() + feat_Res_.size());
@@ -226,11 +234,11 @@ inline IntVector select_pc(ScoreMatrix &feat_Matrix, MyMatrix &theta_matrix,
 
     // Fit theta matrix
     ScoreMatrix theta_Matrix_ = Rpca.fit_fixed(base_Matrix);
-    theta_matrix.from_Eigen(theta_Matrix_);                         // theta_Matrix_: base_size * feat_size
-    cout<<"res: \n"<<Rpca.SparseComponent().topLeftCorner(3, 5)<<endl;
+    theta_matrix.from_Eigen(theta_Matrix_.transpose());             // theta_Matrix_: feat_size * base_size
     ScoreMatrix diff = feat_Matrix - base_Matrix * theta_Matrix_;
     cout<< "diff Fro norm: "<<diff.norm() <<" Abs norm: "<<diff.lpNorm<1>() << endl;
-    cout<<"theta: "<<theta_Matrix_.rows()<<" "<<theta_Matrix_.cols()<<"\n"<<theta_Matrix_.topLeftCorner(3, 5)<<endl;
+    // std::ofstream file1("output_theta.txt");
+    // file1 << theta_Matrix_.transpose();
     return base_idx;
 }
 

@@ -8,6 +8,9 @@
 // #ifndef ENABLE_RW
 // #define ENABLE_RW
 // #endif
+#ifndef DEBUG
+#define DEBUG
+#endif
 
 #include <queue>
 #include <vector>

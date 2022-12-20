@@ -13,14 +13,9 @@
 #include "BasicDefinition.h"
 
 typedef Eigen::Matrix<NInt, Eigen::Dynamic, 1> NodeVector;
-typedef Eigen::Map<NodeVector> NodeMap;
-typedef Eigen::Ref<NodeVector> NodeRef;
 typedef Eigen::Matrix<ScoreFlt, Eigen::Dynamic, 1> ScoreVector;
 typedef Eigen::Map<ScoreVector> ScoreVectorMap;
-typedef Eigen::Ref<ScoreVector> ScoreVectorRef;
 typedef Eigen::Matrix<ScoreFlt, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> ScoreMatrix;
-typedef Eigen::Map<ScoreMatrix> ScoreMap;
-typedef Eigen::Ref<ScoreMatrix> ScoreRef;
 
 
 /*
@@ -124,9 +119,6 @@ public:
         ncol = shape[1];    // node num Vt_num
         printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
         cout<<"Input file: "<<nrow<<" "<<ncol<<" "<<file_path<<endl;
-        // cout<<data[0]<<" "<<data[1]<<"..."<<data[ncol-2]<<" "<<data[ncol-1]<<endl;
-        // cout<<data[ncol+0]<<" "<<data[ncol+1]<<"..."<<data[2*ncol-2]<<" "<<data[2*ncol-1]<<endl;
-        // cout<<data[(nrow-1)*ncol+0]<<" "<<data[(nrow-1)*ncol+1]<<"..."<<data[nrow*ncol-2]<<" "<<data[nrow*ncol-1]<<endl;
     }
 
     void save_npy(const std::string file_path) {
@@ -260,7 +252,7 @@ public:
         matv2d.clear();
         // ! Still require O(2n) RAM as My2DVectorRow::erase does not reallocate
         printf("Mat    RSS RAM: %.3f GB\n", get_stat_memory());
-        cout<<"Feat  size: "<<data.size()<<" "<<data[0].size()-tail<<endl;
+        cout<<"Load  size: "<<data.size()<<" "<<data[0].size()-tail<<endl;
     }
 
     void to_V2D(My2DVector &matv2d) {
@@ -270,7 +262,15 @@ public:
             matv2d.emplace_row(data[i].begin(), data[i].end()-tail);
             data[i].clear();
         }
-        cout<<"Save  size: "<<matv2d.nrows()<<" "<<matv2d.ncols()<<" "<<matv2d.get_data().size()<<endl;
+        cout<<"Expo  size: "<<matv2d.nrows()<<" "<<matv2d.ncols()<<" "<<matv2d.get_data().size()<<endl;
+    }
+
+    ScoreMatrix to_Eigen() {
+        ScoreMatrix mat(nrow, ncol);
+        for (NInt i = 0; i < nrow; ++i)
+            for (NInt j = 0; j <ncol; ++j)
+                mat(i, j) = data[i][j];
+        return mat;
     }
 
     ScoreMatrix to_Eigen(const IntVector Vt_nodes) {
@@ -282,6 +282,7 @@ public:
     }
 
     void from_Eigen(const ScoreMatrix &mat) {
+        assert(mat.rows() == nrow && mat.cols() == ncol);
         // data.resize(nrow);
         for (NInt i = 0; i < nrow; ++i)
             ScoreVectorMap(data[i].data(), ncol) = mat.row(i);

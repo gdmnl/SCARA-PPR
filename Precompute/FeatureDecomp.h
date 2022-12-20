@@ -13,6 +13,12 @@
 #include "MyType.h"
 
 
+inline ScoreMatrix shrink(const ScoreMatrix& X, const ScoreFlt tol) {
+  const ScoreMatrix a_plus = X.array() + tol;
+  const ScoreMatrix a_minus = X.array() - tol;
+  return a_plus.cwiseMin(0) + a_minus.cwiseMax(0);
+}
+
 /*
  * Randomized SVD for fast approximate matrix decomposition
  * Interface is same as Eigen's jacobiSVD
@@ -121,7 +127,7 @@ public:
         L = ScoreMatrix::Zero(nr, nc);
         S = ScoreMatrix::Zero(nr, nc);
 
-        spe_norm = norm_op(M);                      // matrix spectral norm
+        spe_norm = speNorm(M);                      // matrix spectral norm
         fro_norm = M.norm();                        // matrix frobenius norm
         // l1_norm = M.cwiseAbs().colwise().sum().maxCoeff();   // matrix l1 norm
         l1_norm = M.lpNorm<1>();                    // coefficient-wise l1 norm
@@ -132,12 +138,6 @@ public:
     ScoreMatrix LowRankComponent() { return (trans? L.transpose() : L ); }
 
     ScoreMatrix SparseComponent()  { return (trans? S.transpose() : S ); }
-
-    // Encourages sparsity in M by slightly shrinking all values, thresholding small values to zero
-    void shrink(const ScoreMatrix& X, ScoreFlt tau, ScoreMatrix& S) {
-        ScoreMatrix S0 = X.cwiseAbs() - tau * ScoreMatrix::Ones(X.rows(), X.cols());
-        S = (S0.array() > 0).select(X, ScoreMatrix::Zero(X.rows(), X.cols()));
-    }
 
     // Encourages low-rank by taking (truncated) SVD, then setting small singular values to zero
     int svd_truncate(const ScoreMatrix& X, int rank, ScoreFlt min_sv, ScoreMatrix& L) {
@@ -151,7 +151,7 @@ public:
     }
 
     // Returns largest singular value of M
-    ScoreFlt norm_op(const ScoreMatrix& M, int rank = 5) {
+    ScoreFlt speNorm(const ScoreMatrix& M, int rank = 5) {
         RandomizedSvd rsvd(M, rank, (int)ceil(0.2*rank)+1, 1);
         return rsvd.singularValues()[0];
     }
@@ -173,18 +173,19 @@ public:
         int sv = sv_step;
 
         for (int i = 0; i < maxiter; ++i) {
-            cout<<"rank: "<<sv<<", r: "<<lambda/mu<<". s: "<<1/mu<<", ";
+            // cout<<"  rank: "<<sv<<", r: "<<lambda/mu<<". s: "<<1/mu<<", ";
             M2 = M + Z / mu;
             /* update estimate of low-rank component */
             int svp = svd_truncate(M2 - S, sv, 1/mu, L);
             sv += ((svp < sv) ? 1 : sv_step);
             /* update estimate of sparse component */
-            shrink(M2 - L, lambda/mu, S);
+            // Encourages sparsity in M by slightly shrinking all values, thresholding small values to zero
+            S = shrink(M2 - L, lambda/mu);
 
             /* compute residual */
             ScoreMatrix Zi = M - L - S;
             ScoreFlt err = Zi.norm();
-            cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
+            // cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
             if (err < errmin) {
                 break;
             }
@@ -205,25 +206,26 @@ public:
         ScoreFlt mu_bar = mu / TOL;
         ScoreFlt rho = k * 1.5;
         ScoreFlt init_scale = std::max(spe_norm, M.lpNorm<Eigen::Infinity>()) * lambda;
-        ScoreMatrix Z = M / init_scale;
+        // ScoreMatrix Z = M / init_scale;
+        ScoreMatrix Z = ScoreMatrix::Zero(nr, nc);
         ScoreMatrix M2, Theta;
 
         RandomizedSvd Bsvd(B, rank);
         ScoreMatrix Binv = Bsvd.pinv();
 
         for (int i = 0; i < maxiter; ++i) {
-            cout<<"r: "<<lambda/mu<<", ";
+            // cout<<"  r: "<<lambda/mu<<", ";
             M2 = M + Z / mu;
             /* update estimate of low-rank component */
             Theta = Binv * (M2 - S);
             L = B * Theta;
             /* update estimate of sparse component */
-            shrink(M2 - L, lambda/mu, S);
+            S = shrink(M2 - L, lambda/mu);
 
             /* compute residual */
             ScoreMatrix Zi = M - L - S;
             ScoreFlt err = Zi.norm();
-            cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
+            // cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
             if (err < TOL * fro_norm) {
                 break;
             }
