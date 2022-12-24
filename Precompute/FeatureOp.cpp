@@ -134,7 +134,7 @@ public:
         printf("Push  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
         printf("  Init     Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);
         printf("  FwdPush  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_fp), vector_L1(time_fp) / thread_num);
-        printf("  PIter    Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_it), vector_L1(time_it) / thread_num);
+        printf("  PwrIter  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_it), vector_L1(time_it) / thread_num);
         printf("  RW       Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_rw), vector_L1(time_rw) / thread_num);
         // printf("Read  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
         printf("Write Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_write), vector_L1(time_write) / thread_num);

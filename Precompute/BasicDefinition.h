@@ -19,7 +19,7 @@
 using std::cout;
 using std::endl;
 
-#define IDFMT "lu"
+#define IDFMT "lu"                  // NInt print format
 typedef unsigned long NInt;         // Type of Node / Edge size
 typedef float ScoreFlt;             // Type of PPR Score
 typedef std::vector<NInt> IntVector;
@@ -107,15 +107,6 @@ public:
     inline bool empty() const {
         return idx_last_plus_one == idx_front;
     }
-};
-
-struct FwdPushStructure {
-    VertexQueue active_vertices;        // reserve one slot for the dummy vertex
-    std::vector<bool> is_active;    // reserve one slot for the dummy vertex
-
-    explicit FwdPushStructure(const NInt &numOfVertices) :
-            active_vertices(numOfVertices + 1),
-            is_active(numOfVertices + 1, false) {}
 };
 
 #endif //SCARA_BASICDEFINITION_H

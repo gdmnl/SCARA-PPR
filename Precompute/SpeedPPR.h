@@ -222,11 +222,37 @@ public:
         }
         time_fp += getCurrentTime() - time_start;
 
-        // PowerIter
+        // Power Iteration
         time_start = getCurrentTime();
         num_active = active_vertices.size();
-        const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
+        while (num_active > queue_threshold) {
+            num_active = 0;
+            for (NInt id = 0, next_id = 1, degree, idx_start, idx_end = graph.get_neighbor_list_start_pos(id);
+                 id < numOfVertices; ++id, ++next_id) {
+                idx_start = idx_end;
+                idx_end = graph.get_neighbor_list_start_pos(next_id);
+                degree = idx_end - idx_start;
+                const FLT &residual = residuals[id];
+                const FLT one_minus_alpha_residual = one_minus_alpha * residual;
+                if (fabs(one_minus_alpha_residual) >= degree) {
+                    const FLT alpha_residual = residual - one_minus_alpha_residual;
+                    pi[id] += alpha_residual;
+                    residuals[id] = 0;
+                    const FLT increment = one_minus_alpha_residual / degree;
+                    num_active += degree;
+                    for (uint32_t j = idx_start; j < idx_end; ++j) {
+                        const NInt &nid = graph.getOutNeighbor(j);
+                        residuals[nid] += increment;
+                    }
+                }
+            }
+            // cout<<" PwrIter: "<<" "<<num_active<<endl;
+        }
+        time_it += getCurrentTime() - time_start;
 
+        // Forward Push 2
+        time_start = getCurrentTime();
+        const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
         num_active = 0;
         active_vertices.clear();
         std::fill(is_active.begin(), is_active.end(), false);
@@ -260,7 +286,7 @@ public:
                 }
             }
         }
-        time_it += getCurrentTime() - time_start;
+        time_fp += getCurrentTime() - time_start;
 
         // random walks
         time_start = getCurrentTime();
@@ -328,7 +354,7 @@ public:
                 if(_seeds[i] != 0.0){
                     active_vertices.push(i);
                     is_active[i] = true;
-                    residuals[i] = _seeds[i] * num_walks;
+                    residuals[i] *= num_walks;
                 }
             }
         } else {
@@ -393,11 +419,36 @@ public:
         }
         time_fp += getCurrentTime() - time_start;
 
-        // PowerIter
+        // Power Iteration
         time_start = getCurrentTime();
         num_active = active_vertices.size();
-        const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
+        while (num_active > queue_threshold) {
+            num_active = 0;
+            for (NInt id = 0, next_id = 1, degree, idx_start, idx_end = graph.get_neighbor_list_start_pos(id);
+                 id < numOfVertices; ++id, ++next_id) {
+                idx_start = idx_end;
+                idx_end = graph.get_neighbor_list_start_pos(next_id);
+                degree = idx_end - idx_start;
+                const FLT &residual = residuals[id];
+                const FLT one_minus_alpha_residual = one_minus_alpha * residual;
+                if (fabs(one_minus_alpha_residual) >= degree) {
+                    const FLT alpha_residual = residual - one_minus_alpha_residual;
+                    pi[id] += alpha_residual;
+                    residuals[id] = 0;
+                    const FLT increment = one_minus_alpha_residual / degree;
+                    num_active += degree;
+                    for (uint32_t j = idx_start; j < idx_end; ++j) {
+                        const NInt &nid = graph.getOutNeighbor(j);
+                        residuals[nid] += increment;
+                    }
+                }
+            }
+        }
+        time_it += getCurrentTime() - time_start;
 
+        // Forward Push 2
+        time_start = getCurrentTime();
+        const FLT one_over_one_minus_alpha = 1.0 / one_minus_alpha;
         num_active = 0;
         active_vertices.clear();
         std::fill(is_active.begin(), is_active.end(), false);
@@ -431,7 +482,7 @@ public:
                 }
             }
         }
-        time_it += getCurrentTime() - time_start;
+        time_fp += getCurrentTime() - time_start;
 
         // random walks
         time_start = getCurrentTime();
