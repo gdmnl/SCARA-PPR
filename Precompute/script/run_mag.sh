@@ -8,5 +8,5 @@ mkdir -p ${SAVEDIR}
         -data_folder ${DATADIR} -estimation_folder ${SAVEDIR} \
         -graph adj.txt -feats feats_norm.npy \
         -alpha 0.2 -epsilon 16 -thread_num 14 \
-        -seed ${SEED} > ${SAVEDIR}/out_${SEED}.txt
+        -seed ${SEED} > ${SAVEDIR}/pre_${SEED}.txt
 # ../Precompute/build/featpush -algo featpush -data_folder ../data/mag -estimation_folder ../save/mag/featpush/7 -feats feats_norm.npy -thread_num 1 -seed 7 -alpha 0.2 -epsilon 16

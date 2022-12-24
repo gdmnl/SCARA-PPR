@@ -1,7 +1,8 @@
 import os
 import numpy as np
 import scipy.sparse as sp
-import sklearn.preprocessing
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
 
 
 NTRAIN_PER_CLASS = 20
@@ -17,7 +18,7 @@ def diag_sp(diag):
 
 def matstd(m, with_mean=False):
     """Matrix standardization"""
-    scaler = sklearn.preprocessing.StandardScaler(with_mean=with_mean)
+    scaler = StandardScaler(with_mean=with_mean)
     m = scaler.fit_transform(m)
     return m
 
@@ -79,6 +80,13 @@ def split_label(seed, n, n_train_per_class, n_val, labels):
 
     train_val_idx = np.concatenate((train_idx, val_idx))
     test_idx = np.sort(np.setdiff1d(np.arange(n), train_val_idx))
+    return train_idx, val_idx, test_idx
+
+
+def split_stratify(seed, n, n_train, n_val, labels):
+    idx = np.arange(n)
+    train_idx, test_idx = train_test_split(idx, train_size=n_train, random_state=seed, stratify=labels)
+    val_idx, test_idx = train_test_split(test_idx, train_size=n_val, random_state=seed, stratify=labels[test_idx])
     return train_idx, val_idx, test_idx
 
 
@@ -206,8 +214,9 @@ class DataProcess(object):
                     self.idx_val = np.sort(rnd[n_train:n_train + n_val])
                     self.idx_test = np.sort(rnd[n_train + n_val:])
                 else:
-                    self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)
                     # self.idx_train, self.idx_val, self.idx_test = split_random(self.seed, self.n, n_train, n_val)
+                    # self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)
+                    self.idx_train, self.idx_val, self.idx_test = split_stratify(self.seed, self.n, n_train, n_val, self.labels)
             elif key == 'labels_oh':
                 if self.labels.ndim == 2:
                     self.labels_oh = self.labels

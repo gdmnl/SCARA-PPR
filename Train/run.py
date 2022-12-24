@@ -73,13 +73,13 @@ def train(ld=loader_train):
         if args.dev >= 0:
             batch_x = batch_x.cuda(args.dev)
             batch_y = batch_y.cuda(args.dev)
-        t1 = time.time()
+        time_start = time.time()
         optimizer.zero_grad()
         output = model(batch_x)
         loss_batch = loss_fn(output, batch_y)
         loss_batch.backward()
         optimizer.step()
-        time_epoch+=(time.time()-t1)
+        time_epoch += (time.time()-time_start)
         loss_list.append(loss_batch.item())
     return np.mean(loss_list), time_epoch
 
@@ -122,15 +122,12 @@ for epoch in range(args.epochs):
     train_time += train_ep
     acc_val = eval(ld=loader_val)
     scheduler.step(acc_val)
-    if (epoch+1) % 10 == 0:
+    if (epoch+1) % 1 == 0:
         res = f"Epoch:{epoch:04d} | train loss:{loss_train:.4f}, val acc:{acc_val:.4f}, cost:{train_time:.4f}"
         logger.print(res)
     is_best = model_logger.save_best(acc_val, epoch=epoch, print_log=False)
     # Early stop if converge
-    if is_best:
-        conv_epoch = 0
-    else:
-        conv_epoch += 1
+    conv_epoch = 0 if is_best else conv_epoch + 1
     if conv_epoch == args.patience:
         break
 

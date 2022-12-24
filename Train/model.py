@@ -29,7 +29,7 @@ class Dense(nn.Module):
         return output
 
 class MLP(nn.Module):
-    def __init__(self, nfeat, nlayers,nhidden, nclass, dropout, bias):
+    def __init__(self, nfeat, nlayers, nhidden, nclass, dropout, bias):
         super(MLP, self).__init__()
         self.fcs = nn.ModuleList()
         self.fcs.append(Dense(nfeat, nhidden, bias))
