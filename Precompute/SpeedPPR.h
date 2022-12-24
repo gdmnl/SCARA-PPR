@@ -36,16 +36,12 @@ public:
                 means(_numOfVertices + 2, 0),
                 active_vertices(_numOfVertices + 2),
                 is_active(_numOfVertices + 2, false),
-                pi(_numOfVertices + 2, 0),
-                residuals(_numOfVertices + 2, 0),
                 time_init(0), time_fp(0), time_it(0), time_rw(0)
         {}
 
     protected:
         VertexQueue active_vertices;
         std::vector<bool> is_active;
-        std::vector<FLT> pi;
-        std::vector<FLT> residuals;
 
         IntVector active_ids;
         std::vector<FLT> active_residuals;
@@ -129,44 +125,41 @@ public:
     template<class FLT>
     void calc_ppr_cache(
             GStruct<FLT> &_gstruct,
-            const std::vector<FLT> &_seeds, const IntVector &_seeds_ids,
+            std::vector<FLT> &residuals, const IntVector &_seeds_ids,
             const FLT _epsilon, const FLT _alpha, const FLT _lower_threshold,
             const WalkCache &_walk_cache, const FLT gamma = 1.0) {
         double time_start = getCurrentTime();
         long long number_of_pushes = 0;
         const auto avg_deg = static_cast<FLT>(graph.getNumOfEdges() / (FLT) graph.getNumOfVertices());
         FLT num_walks = ceil( (2 + (2.0 / 3.0) * _epsilon) * d_log_numOfVertices /
-                                    (_epsilon * _epsilon * _lower_threshold) / gamma );
+                                   (_epsilon * _epsilon * _lower_threshold) / gamma );
         auto &active_vertices = _gstruct.active_vertices;
         auto &is_active = _gstruct.is_active;
-        auto &pi = _gstruct.pi;
-        auto &residuals = _gstruct.residuals;
         auto &means = _gstruct.means;
         auto &time_init = _gstruct.time_init;
         auto &time_fp = _gstruct.time_fp;
         auto &time_it = _gstruct.time_it;
         auto &time_rw = _gstruct.time_rw;
 
-        std::fill(pi.begin(), pi.end(), 0);
-        std::fill(residuals.begin(), residuals.end(), 0.0);
+        std::fill(means.begin(), means.end(), 0);
         std::fill(is_active.begin(), is_active.end(), false);
         active_vertices.clear();
 
         if (_seeds_ids.size() == graph.getNumOfVertices()) {
             for(NInt i = 0; i < graph.getNumOfVertices(); i++){
-                if(_seeds[i] != 0.0){
+                if(residuals[i] != 0.0){
                     active_vertices.push(i);
                     is_active[i] = true;
-                    residuals[i] = _seeds[i] * num_walks;
+                    residuals[i] *= num_walks;
                 }
             }
         } else {
             for(NInt id = 0; id < _seeds_ids.size(); id++){
                 NInt i = _seeds_ids[id];
-                if(_seeds[i] != 0.0){
+                if(residuals[i] != 0.0){
                     active_vertices.push(i);
                     is_active[i] = true;
-                    residuals[i] = _seeds[i] * num_walks;
+                    residuals[i] *= num_walks;
                 }
             }
         }
@@ -195,7 +188,7 @@ public:
 
                 if (fabsf(one_minus_alpha_residual) >= degree_f * scale_factor) {
                     const FLT alpha_residual = residual - one_minus_alpha_residual;
-                    pi[id] += alpha_residual;
+                    means[id] += alpha_residual;
                     residuals[id] = 0;
                     const FLT increment = one_minus_alpha_residual / degree_f;
 
@@ -236,7 +229,7 @@ public:
                 const FLT one_minus_alpha_residual = one_minus_alpha * residual;
                 if (fabs(one_minus_alpha_residual) >= degree) {
                     const FLT alpha_residual = residual - one_minus_alpha_residual;
-                    pi[id] += alpha_residual;
+                    means[id] += alpha_residual;
                     residuals[id] = 0;
                     const FLT increment = one_minus_alpha_residual / degree;
                     num_active += degree;
@@ -273,7 +266,7 @@ public:
             const FLT one_minus_alpha_residual = one_minus_alpha * residual;
             if (fabsf(one_minus_alpha_residual) >= degree_f && degree_f) {
                 const FLT alpha_residual = residual - one_minus_alpha_residual;
-                pi[id] += alpha_residual;
+                means[id] += alpha_residual;
                 residuals[id] = 0;
                 const FLT increment = one_minus_alpha_residual / degree_f;
                 for (uint32_t j = idx_start; j < idx_end; ++j) {
@@ -290,7 +283,6 @@ public:
 
         // random walks
         time_start = getCurrentTime();
-        means.swap(pi);
         for (NInt id = 0; id < numOfVertices; ++id) {
             FLT &residual = residuals[id];
             if (residual != 0) {
@@ -324,7 +316,7 @@ public:
     template<class FLT>
     void calc_ppr_walk(
             GStruct<FLT> &_gstruct,
-            const std::vector<FLT> &_seeds, const IntVector &_seeds_ids,
+            std::vector<FLT> &residuals, const IntVector &_seeds_ids,
             const FLT _epsilon, const FLT _alpha,
             const FLT _lower_threshold, const FLT gamma = 1.0) {
         double time_start = getCurrentTime();
@@ -333,25 +325,22 @@ public:
         FLT time_scaling_factor = 1.0;
         FLT one_over_time_scaling_factor = 1.0 / time_scaling_factor;
         FLT num_walks = ceil( (2 + (2.0 / 3.0) * _epsilon) * d_log_numOfVertices /
-                                    (_epsilon * _epsilon * _lower_threshold) / gamma );
+                                   (_epsilon * _epsilon * _lower_threshold) / gamma );
         auto &active_vertices = _gstruct.active_vertices;
         auto &is_active = _gstruct.is_active;
-        auto &pi = _gstruct.pi;
-        auto &residuals = _gstruct.residuals;
         auto &means = _gstruct.means;
         auto &time_init = _gstruct.time_init;
         auto &time_fp = _gstruct.time_fp;
         auto &time_it = _gstruct.time_it;
         auto &time_rw = _gstruct.time_rw;
 
-        std::fill(pi.begin(), pi.end(), 0);
-        std::fill(residuals.begin(), residuals.end(), 0.0);
+        std::fill(means.begin(), means.end(), 0);
         std::fill(is_active.begin(), is_active.end(), false);
         active_vertices.clear();
 
         if (_seeds_ids.size() == graph.getNumOfVertices()) {
             for(NInt i = 0; i < graph.getNumOfVertices(); i++){
-                if(_seeds[i] != 0.0){
+                if(residuals[i] != 0.0){
                     active_vertices.push(i);
                     is_active[i] = true;
                     residuals[i] *= num_walks;
@@ -360,10 +349,10 @@ public:
         } else {
             for(NInt id = 0; id < _seeds_ids.size(); id++){
                 NInt i = _seeds_ids[id];
-                if(_seeds[i] != 0.0){
+                if(residuals[i] != 0.0){
                     active_vertices.push(i);
                     is_active[i] = true;
-                    residuals[i] = _seeds[i] * num_walks;
+                    residuals[i] *= num_walks;
                 }
             }
         }
@@ -392,7 +381,7 @@ public:
 
                 if (fabsf(one_minus_alpha_residual) >= degree_f * scale_factor) {
                     const FLT alpha_residual = residual - one_minus_alpha_residual;
-                    pi[id] += alpha_residual;
+                    means[id] += alpha_residual;
                     residuals[id] = 0;
                     const FLT increment = one_minus_alpha_residual / degree_f;
 
@@ -433,7 +422,7 @@ public:
                 const FLT one_minus_alpha_residual = one_minus_alpha * residual;
                 if (fabs(one_minus_alpha_residual) >= degree) {
                     const FLT alpha_residual = residual - one_minus_alpha_residual;
-                    pi[id] += alpha_residual;
+                    means[id] += alpha_residual;
                     residuals[id] = 0;
                     const FLT increment = one_minus_alpha_residual / degree;
                     num_active += degree;
@@ -469,7 +458,7 @@ public:
             const FLT one_minus_alpha_residual = one_minus_alpha * residual;
             if (fabsf(one_minus_alpha_residual) >= degree_f && degree_f) {
                 const FLT alpha_residual = residual - one_minus_alpha_residual;
-                pi[id] += alpha_residual;
+                means[id] += alpha_residual;
                 residuals[id] = 0;
                 const FLT increment = one_minus_alpha_residual / degree_f;
                 for (uint32_t j = idx_start; j < idx_end; ++j) {
@@ -486,8 +475,6 @@ public:
 
         // random walks
         time_start = getCurrentTime();
-        means.swap(pi);
-
 #ifdef ENABLE_RW
         uint32_t num_of_walks_performed = 0;
         FLT r_sum = 0;

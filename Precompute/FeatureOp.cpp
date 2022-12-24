@@ -199,11 +199,11 @@ protected:
         double time_start = getCurrentTime();
 #ifdef ENABLE_RW
         if (param.index)
-            ppr.calc_ppr_cache(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, gamma);
+            ppr.calc_ppr_cache(_gstruct, feat_matrix[base_idx[idx]], Vt_nodes, epsilon, alpha, lower_threshold, walkCache, gamma);
         else
-            ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, gamma);
+            ppr.calc_ppr_walk(_gstruct, feat_matrix[base_idx[idx]], Vt_nodes, epsilon, alpha, lower_threshold, gamma);
 #else
-        ppr.calc_ppr_walk(_gstruct, base_matrix[idx], Vt_nodes, epsilon, alpha, lower_threshold, gamma);
+        ppr.calc_ppr_walk(_gstruct, feat_matrix[base_idx[idx]], Vt_nodes, epsilon, alpha, lower_threshold, gamma);
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
@@ -397,7 +397,7 @@ public:
 
     void fit() {
         base_idx = select_base(feat_matrix, base_size);
-        base_matrix.swap_rows(base_idx, feat_matrix);
+        base_matrix.copy_rows(base_idx, feat_matrix);
         // ScoreMatrix base_Matrix_ = base_matrix.to_Eigen();
         // RandomizedSvd rsvd(base_Matrix_, base_size);
         // ScoreMatrix base_Inv_ = rsvd.pinv();
@@ -442,7 +442,7 @@ public:
         IntVector   Vs_nodes = sample_nodes(Vt_nodes, Vs_num);
         ScoreMatrix feat_sample_Matrix = feat_matrix.to_Eigen(Vs_nodes);
         base_idx = select_pc(feat_sample_Matrix, theta_matrix, base_size, sqrt(avg_degree));
-        base_matrix.swap_rows(base_idx, feat_matrix);
+        base_matrix.copy_rows(base_idx, feat_matrix);
         cout<<"Theta size: "<<theta_matrix.nrows()<<" "<<theta_matrix.ncols()<<" "<<theta_matrix.size()<<endl;
         cout<<"PBase size: "<<base_result.nrows()<<" "<<base_result.ncols()<<" "<<base_result.size()<<endl;
     }
