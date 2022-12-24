@@ -13,7 +13,7 @@ import torch.utils.data as Data
 
 from logger import Logger, ModelLogger, prepare_opt
 from loader import load_data
-from model import MLP
+from model import MLP, MLP_sc
 
 
 # Training settings
@@ -40,12 +40,10 @@ feat, labels, idx = load_data(args.algo, datastr=args.data, datapath=args.path,
             alpha=args.alpha, eps=args.eps, rrz=args.rrz, seed=args.seed)
 nclass = labels.shape[1] if args.multil else int(labels.max()) + 1
 
-model = MLP(nfeat=feat['train'].shape[1],
-            nlayers=args.layer,
-            nhidden=args.hidden,
-            nclass=nclass,
-            dropout=args.dropout,
-            bias = args.bias)
+model = MLP_sc(nfeat=feat['train'].shape[1], nlayers=args.layer,
+               nhidden=args.hidden, nclass=nclass,
+               dropout=args.dropout, bias=args.bias)
+print(model)
 model_logger.regi_model(model, save_init=False)
 if args.dev >= 0:
     model = model.cuda(args.dev)

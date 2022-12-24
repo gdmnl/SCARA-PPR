@@ -24,9 +24,11 @@ class Dense(nn.Module):
     def forward(self, input):
         output = torch.mm(input, self.weight)
         output = self.bias(output)
+        # Residual connection
         if self.in_features == self.out_features:
-            output = output + input
+            output += input
         return output
+
 
 class MLP(nn.Module):
     def __init__(self, nfeat, nlayers, nhidden, nclass, dropout, bias):
@@ -48,3 +50,31 @@ class MLP(nn.Module):
         x = F.dropout(x, self.dropout, training=self.training)
         x = self.fcs[-1](x)
         return x
+
+
+class MLP_sc(nn.Module):
+    def __init__(self, nfeat, nlayers, nhidden, nclass, dropout, bias):
+        super(MLP_sc, self).__init__()
+        # Shortcut connection of input features
+        self.shortcut = nn.Linear(nfeat, nhidden, bias=False)
+        self.fcs = nn.ModuleList()
+        self.fcs.append(Dense(nfeat, nhidden, bias))
+        for _ in range(nlayers-2):
+            self.fcs.append(Dense(nhidden, nhidden, bias))
+        self.fcs.append(Dense(nhidden, nclass))
+        self.act_fn = nn.ReLU()
+        self.dropout = dropout
+
+    def forward(self, x):
+        out = F.dropout(x, self.dropout, training=self.training)
+        out = self.fcs[0](out)
+        out += self.shortcut(x)
+        out = self.act_fn(out)
+        for fc in self.fcs[1:-1]:
+            out = F.dropout(out, self.dropout, training=self.training)
+            out = fc(out)
+            out += self.shortcut(x)
+            out = self.act_fn(out)
+        out = F.dropout(out, self.dropout, training=self.training)
+        out = self.fcs[-1](out)
+        return out
