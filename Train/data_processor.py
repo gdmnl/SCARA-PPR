@@ -84,6 +84,7 @@ def split_label(seed, n, n_train_per_class, n_val, labels):
 
 
 def split_stratify(seed, n, n_train, n_val, labels):
+    assert labels.ndim == 1, 'Only support 1D labels'
     idx = np.arange(n)
     train_idx, test_idx = train_test_split(idx, train_size=n_train, random_state=seed, stratify=labels)
     val_idx, test_idx = train_test_split(test_idx, train_size=n_val, random_state=seed, stratify=labels[test_idx])
@@ -304,7 +305,7 @@ class DataProcess(object):
                 self.attr_matrix = self.attr_matrix.astype(np.float32)
                 np.save(self.feats_path, self.attr_matrix)
             elif key == 'attr_matrix_norm':
-                self.attr_matrix_norm = self.attr_matrix_norm.astype(np.float32)
+                self.attr_matrix_norm = self.attr_matrix_norm.astype(np.float32, order='C')
                 np.save(self.featsnorm_path, self.attr_matrix_norm)
             else:
                 print("Key not exist: {}".format(key))

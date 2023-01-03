@@ -4,9 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Dense(nn.Module):
+class ResLinear(nn.Module):
     def __init__(self, in_features, out_features, bias='none'):
-        super(Dense, self).__init__()
+        super(ResLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
@@ -30,14 +30,14 @@ class Dense(nn.Module):
         return output
 
 
-class MLP(nn.Module):
+class Dense(nn.Module):
     def __init__(self, nfeat, nlayers, nhidden, nclass, dropout, bias):
-        super(MLP, self).__init__()
+        super(Dense, self).__init__()
         self.fcs = nn.ModuleList()
-        self.fcs.append(Dense(nfeat, nhidden, bias))
+        self.fcs.append(ResLinear(nfeat, nhidden, bias))
         for _ in range(nlayers-2):
-            self.fcs.append(Dense(nhidden, nhidden, bias))
-        self.fcs.append(Dense(nhidden, nclass))
+            self.fcs.append(ResLinear(nhidden, nhidden, bias))
+        self.fcs.append(ResLinear(nhidden, nclass))
         self.act_fn = nn.ReLU()
         self.dropout = dropout
 
@@ -52,28 +52,26 @@ class MLP(nn.Module):
         return x
 
 
-class MLP_sc(nn.Module):
+class DenseSkip(nn.Module):
     def __init__(self, nfeat, nlayers, nhidden, nclass, dropout, bias):
-        super(MLP_sc, self).__init__()
-        # Shortcut connection of input features
-        self.shortcut = nn.Linear(nfeat, nhidden, bias=False)
+        super(DenseSkip, self).__init__()
         self.fcs = nn.ModuleList()
-        self.fcs.append(Dense(nfeat, nhidden, bias))
+        self.fcs.append(ResLinear(nfeat, nhidden, bias))
         for _ in range(nlayers-2):
-            self.fcs.append(Dense(nhidden, nhidden, bias))
-        self.fcs.append(Dense(nhidden, nclass))
+            self.fcs.append(ResLinear(nhidden, nhidden, bias))
+        self.fcs.append(ResLinear(nhidden, nclass))
         self.act_fn = nn.ReLU()
         self.dropout = dropout
 
     def forward(self, x):
         out = F.dropout(x, self.dropout, training=self.training)
-        out = self.fcs[0](out)
-        out += self.shortcut(x)
-        out = self.act_fn(out)
+        # Shortcut connection of input features
+        out1 = self.fcs[0](out)
+        out = self.act_fn(out1)
         for fc in self.fcs[1:-1]:
             out = F.dropout(out, self.dropout, training=self.training)
             out = fc(out)
-            out += self.shortcut(x)
+            out += out1
             out = self.act_fn(out)
         out = F.dropout(out, self.dropout, training=self.training)
         out = self.fcs[-1](out)

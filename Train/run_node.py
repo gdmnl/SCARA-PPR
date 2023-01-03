@@ -12,8 +12,8 @@ import torch.optim as optim
 import torch.utils.data as Data
 
 from logger import Logger, ModelLogger, prepare_opt
-from loader import load_data
-from model import MLP, MLP_sc
+from loader import load_node_data
+from model import Dense, DenseSkip
 
 
 # Training settings
@@ -35,14 +35,14 @@ logger = Logger(args.data, args.algo, flag_run=flag_run)
 logger.save_opt(args)
 model_logger = ModelLogger(logger, state_only=True)
 
-feat, labels, idx = load_data(args.algo, datastr=args.data, datapath=args.path,
+feat, labels, idx = load_node_data(args.algo, datastr=args.data, datapath=args.path,
             inductive=args.inductive, multil=args.multil, spt=args.spt,
             alpha=args.alpha, eps=args.eps, rrz=args.rrz, seed=args.seed)
 nclass = labels.shape[1] if args.multil else int(labels.max()) + 1
 
-model = MLP_sc(nfeat=feat['train'].shape[1], nlayers=args.layer,
-               nhidden=args.hidden, nclass=nclass,
-               dropout=args.dropout, bias=args.bias)
+model = DenseSkip(nfeat=feat['train'].shape[1], nlayers=args.layer,
+                  nhidden=args.hidden, nclass=nclass,
+                  dropout=args.dropout, bias=args.bias)
 print(model)
 model_logger.regi_model(model, save_init=False)
 if args.dev >= 0:

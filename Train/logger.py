@@ -125,10 +125,10 @@ class ModelLogger(ABC):
         if self.state_only:
             if model is None:
                 model = self.model
-            state_dict = torch.load(path)
+            state_dict = torch.load(path, map_location='cpu')
             model.load_state_dict(state_dict)
         else:
-            model = torch.load(path)
+            model = torch.load(path, map_location='cpu')
         return self.__set_model(model)
 
     def get_last_epoch(self):

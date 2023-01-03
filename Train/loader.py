@@ -44,9 +44,9 @@ def diag_mul(diag, m):
 
 
 # ====================
-def load_data(algo: str, datastr: str, datapath: str,
-              inductive: bool, multil: bool, spt: int,
-              alpha: float, eps: float, rrz: float, seed: int=0):
+def load_node_data(algo: str, datastr: str, datapath: str,
+                   inductive: bool, multil: bool, spt: int,
+                   alpha: float, eps: float, rrz: float, seed: int=0):
     print('-' * 20)
     # print("Start loading...")
     # Get degree and label
@@ -65,8 +65,8 @@ def load_data(algo: str, datastr: str, datapath: str,
     else:
         processor.calculate(['idx_train'])
     idx = {'train': torch.LongTensor(processor.idx_train),
-           'val': torch.LongTensor(processor.idx_val),
-           'test': torch.LongTensor(processor.idx_test)}
+           'val':   torch.LongTensor(processor.idx_val),
+           'test':  torch.LongTensor(processor.idx_test)}
     # Get graph property
     n, m = processor.n, processor.m
 
