@@ -214,6 +214,9 @@ class DataProcess(object):
                     self.idx_train = np.sort(rnd[:n_train])
                     self.idx_val = np.sort(rnd[n_train:n_train + n_val])
                     self.idx_test = np.sort(rnd[n_train + n_val:])
+                elif 'mag' in self.name:
+                    # self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS * 5, n_val, self.labels)
+                    self.idx_train, self.idx_val, self.idx_test = split_stratify(self.seed, self.n, n_train * 5, n_val, self.labels)
                 else:
                     # self.idx_train, self.idx_val, self.idx_test = split_random(self.seed, self.n, n_train, n_val)
                     # self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)

@@ -51,7 +51,7 @@ class Logger(ABC):
         """
         Print string to console and write log file.
         """
-        print(s)
+        print(s, flush=True)
         with open(self.file_log, 'a') as f:
             f.write(str(s) + '\n')
 
@@ -71,6 +71,7 @@ class Logger(ABC):
     def save_opt(self, opt):
         with open(self.file_config, 'a') as f:
             json.dump(opt.toDict(), fp=f, indent=4, sort_keys=False)
+            f.write('\n')
         print("Option saved.")
         print("Config path: {}".format(self.file_config))
         print("Option dict: {}\n".format(opt.toDict()))

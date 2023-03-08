@@ -1,5 +1,5 @@
 {
-    "data": "ppi",
+    "data": "yelp",
     "path": "../data/",
     "algo": "featpush",
     "epochs": 1000,
@@ -11,9 +11,9 @@
     "hidden": 2048,
     "dropout": 0.1,
     "bias": "bn",
-    "alpha": 0.3,
-    "eps": 0.5,
-    "rrz": 0.0,
+    "alpha": 0.9,
+    "eps": 16,
+    "rrz": 0.3,
     "inductive": true,
     "multil": true,
     "spt": 1

@@ -16,7 +16,7 @@ If you find this work useful, please cite our paper:
 >  PVLDB, 15(11): 3240-3248, 2022. doi:10.14778/3551793.3551866.
 ```
 @article{liao2022scara,
-  title={SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization},
+  title={{SCARA}: Scalable Graph Neural Networks with Feature-Oriented Optimization},
   author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
   journal={Proceedings of the VLDB Endowment},
   volume={15},

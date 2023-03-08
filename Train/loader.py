@@ -6,7 +6,7 @@ import torch
 from data_processor import DataProcess, diag_sp
 
 
-np.set_printoptions(linewidth=160, edgeitems=5,
+np.set_printoptions(linewidth=160, edgeitems=5, threshold=20,
                     formatter=dict(float=lambda x: "% 9.3e" % x))
 torch.set_printoptions(linewidth=160, edgeitems=5)
 
@@ -108,13 +108,13 @@ def load_node_data(algo: str, datastr: str, datapath: str,
             features = deg_pow @ features               # shape [n, F]
         else:
             features = diag_mul(deg_pow, lmatstd(features))
-        print('all head no std')
+        print(f'{algo_i} all head no std')
         print(features[:5, :])
-        print('train head no std ', idx_fit[:5])
+        print(f'{algo_i} train head no std ', idx_fit[:5])
         print(features[idx_fit[:5], :])
         features = matstd_clip(features, idx_fit, True)
-        print('all head ')
-        print(features[:5, :])
+        print(f'{algo_i} all head ')
+        print(features[:5, :], flush=True)
         return features
 
     # Assign features
@@ -136,5 +136,5 @@ def load_node_data(algo: str, datastr: str, datapath: str,
     # print(feat['test'][:5, :])
     # print(labels.size(), labels)
     print(f"n={n}, m={m}, F_t={feat['train'].size()}")
-    print(f"n_train={idx['train'].size()}, n_val={idx['val'].size()}, n_test={idx['test'].size()}")
+    print(f"n_train={idx['train'].size()}, n_val={idx['val'].size()}, n_test={idx['test'].size()}", flush=True)
     return feat, labels, idx

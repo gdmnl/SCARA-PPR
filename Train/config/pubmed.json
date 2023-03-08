@@ -14,5 +14,7 @@
     "alpha": 0.1,
     "eps": 2,
     "rrz": 0.5,
+    "inductive": false,
+    "multil": false,
     "spt": 1
 }

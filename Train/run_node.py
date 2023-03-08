@@ -23,6 +23,7 @@ parser.add_argument('-c', '--config', default='./config/reddit.json', help='conf
 parser.add_argument('-v', '--dev', type=int, default=-1, help='device id.')
 args = prepare_opt(parser)
 
+num_thread = 32
 random.seed(args.seed)
 np.random.seed(args.seed)
 torch.manual_seed(args.seed)
@@ -54,13 +55,13 @@ loss_fn = nn.BCEWithLogitsLoss() if args.multil else nn.CrossEntropyLoss()
 
 ds_train = Data.TensorDataset(feat['train'], labels[idx['train']])
 loader_train = Data.DataLoader(dataset=ds_train, batch_size=args.batch,
-                               shuffle=True, num_workers=0)
+                               shuffle=True, num_workers=num_thread)
 ds_val = Data.TensorDataset(feat['val'], labels[idx['val']])
 loader_val = Data.DataLoader(dataset=ds_val, batch_size=args.batch,
-                             shuffle=False, num_workers=0)
+                             shuffle=False, num_workers=num_thread)
 ds_test = Data.TensorDataset(feat['test'], labels[idx['test']])
 loader_test = Data.DataLoader(dataset=ds_test, batch_size=args.batch,
-                              shuffle=False, num_workers=0)
+                              shuffle=False, num_workers=num_thread)
 
 
 def train(ld=loader_train):
@@ -92,12 +93,11 @@ def eval(ld):
             #     print(f'{step + 1} {(step + 1) // (len(ld) // 10):g}: f1 {micro_test / num_test}')
             if args.dev >= 0:
                 batch_x = batch_x.cuda(args.dev)
-                # batch_y = batch_y.cuda(args.dev)
             output = model(batch_x)
             if not args.multil:
                 output = output.max(1)[1]
             output_list = output.cpu().detach().numpy()
-            labels_list = batch_y.cpu().detach().numpy()
+            labels_list = batch_y.detach().numpy()
 
             if args.multil:
                 output_list[output_list > 0] = 1
@@ -110,7 +110,32 @@ def eval(ld):
         return micro / num_total
 
 
-print('-' * 20)
+def eval_v2(ld):
+    """Deprecated for demanding larger memory."""
+    model.eval()
+    micro, num_total = 0, 0
+    with torch.no_grad():
+        for step, (batch_x, batch_y) in enumerate(ld):
+            if args.dev >= 0:
+                batch_x = batch_x.cuda(args.dev)
+            output = model(batch_x)
+            if not args.multil:
+                output = output.max(1)[1]
+            output_list = output.cpu().detach().numpy()
+            labels_list = batch_y.detach().numpy()
+
+            if args.multil:
+                output_bool = np.zeros_like(output_list, dtype=bool)
+                output_bool[output_list > 0] = True
+                micro_batch = f1_score(labels_list, output_bool, average='micro')
+            else:
+                micro_batch = f1_score(labels_list, output_list, average='micro')
+            micro += micro_batch * len(batch_y)
+            num_total += len(batch_y)
+        return micro / num_total
+
+
+print('-' * 20, flush=True)
 # print('Start training...')
 train_time = 0
 conv_epoch = 0
@@ -132,7 +157,7 @@ for epoch in range(args.epochs):
 model = model_logger.load_model('best')
 acc_train = eval(ld=loader_train)
 print(f"Train time cost: {train_time:0.4f}")
-print(f"Train best acc: {acc_train:0.4f}, Val best acc: {model_logger.acc_best:0.4f}")
+print(f"Train best acc: {acc_train:0.4f}, Val best acc: {model_logger.acc_best:0.4f}", flush=True)
 
 print('-' * 20)
 # print("Start inference...")
@@ -141,6 +166,5 @@ acc_test = eval(ld=loader_test)
 time_inference = time.time() - start
 memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 print(f"Test time cost: {time_inference:0.4f}, Memory: {memory / 2**20:.3f}GB")
-
-print(f'Best epoch: {model_logger.epoch_best}, Test acc: {acc_test:.4f}')
+print(f'Best epoch: {model_logger.epoch_best}, Test acc: {acc_test:.4f}', flush=True)
 print('-' * 20)

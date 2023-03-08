@@ -87,7 +87,7 @@ public:
             lower_threshold(1.0 / _graph.getNumOfVertices()),
             graph(_graph),
             param(_param) {
-        printf("Init   RSS RAM: %.3f GB\n", get_stat_memory());
+        printf("Adj    RSS RAM: %.3f GB\n", get_stat_memory());
         Vt_num = load_query(Vt_nodes, param.query_file, V_num);
         feat_v2d.load_npy(param.feature_file);
         // printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
@@ -130,14 +130,14 @@ public:
         printf("%s\n", std::string(80, '-').c_str());
         printf("Max RU_RSS RAM: %.3f GB\n", get_proc_memory());
         printf("End    RSS RAM: %.3f GB\n", get_stat_memory());
-        printf("Total Time    : %.6f, Average: %.12f / node-thread\n", time_total, time_total * thread_num / feat_size);
-        printf("Push  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
-        printf("  Init     Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);
-        printf("  FwdPush  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_fp), vector_L1(time_fp) / thread_num);
-        printf("  PwrIter  Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_it), vector_L1(time_it) / thread_num);
-        printf("  RW       Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_rw), vector_L1(time_rw) / thread_num);
-        // printf("Read  Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
-        printf("Write Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_write), vector_L1(time_write) / thread_num);
+        printf("Total Time    : %.6f, Average: %.8f / node-thread\n", time_total, time_total * thread_num / feat_size);
+        printf("Push  Time Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
+        printf("  Init     Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_init), vector_L1(time_init) / thread_num);
+        printf("  FwdPush  Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_fp), vector_L1(time_fp) / thread_num);
+        printf("  PwrIter  Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_it), vector_L1(time_it) / thread_num);
+        printf("  RW       Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_rw), vector_L1(time_rw) / thread_num);
+        // printf("Read  Time Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_read), vector_L1(time_read) / thread_num);
+        printf("Write Time Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_write), vector_L1(time_write) / thread_num);
     }
 
     void push() {
@@ -304,7 +304,7 @@ public:
         MSG(avg_res);
         MSG(re_feat_num);
         FeatProc::show_statistics();
-        printf("Reuse Time Sum: %.6f, Average: %.12f / thread\n", vector_L1(time_reuse), vector_L1(time_reuse) / thread_num);
+        printf("Reuse Time Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_reuse), vector_L1(time_reuse) / thread_num);
     }
 
     void push() {
