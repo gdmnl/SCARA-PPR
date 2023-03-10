@@ -90,12 +90,10 @@ public:
         printf("Adj    RSS RAM: %.3f GB\n", get_stat_memory());
         Vt_num = load_query(Vt_nodes, param.query_file, V_num);
         feat_v2d.load_npy(param.feature_file);
-        // printf("V2D    RSS RAM: %.3f GB\n", get_stat_memory());
         feat_size = feat_v2d.nrows();
         feat_matrix.set_size(feat_size, V_num);
         feat_matrix.from_V2D(feat_v2d, Vt_nodes);
-        printf("Max  RSS   RAM: %.3f GB\n", get_proc_memory());
-        // printf("Mat    RSS RAM: %.3f GB\n", get_stat_memory());
+        printf("Max   RSS PRAM: %.3f GB\n", get_proc_memory());
 #ifdef ENABLE_RW
         // Perform cached random walk
         if (param.index) {
@@ -128,7 +126,7 @@ public:
 
     void show_statistics() {
         printf("%s\n", std::string(80, '-').c_str());
-        printf("Max RU_RSS RAM: %.3f GB\n", get_proc_memory());
+        printf("Max RURSS PRAM: %.3f GB\n", get_proc_memory());
         printf("End    RSS RAM: %.3f GB\n", get_stat_memory());
         printf("Total Time    : %.6f, Average: %.8f / node-thread\n", time_total, time_total * thread_num / feat_size);
         printf("Push  Time Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_push), vector_L1(time_push) / thread_num);
@@ -235,6 +233,7 @@ protected:
             }
         }
 
+        // ===== Base reduction
         double time_start = getCurrentTime();
         FltVector base_weight;
         ScoreFlt theta_sum = reduce_feat(i, base_weight);
@@ -262,6 +261,7 @@ protected:
 #endif
         time_push[tid] += getCurrentTime() - time_start;
 
+        // ===== Residue reuse
         time_start = getCurrentTime();
         for (NInt idx = 0; idx < base_size; idx++) {
             if (fabs(base_weight[idx]) > TOL) {
@@ -424,6 +424,7 @@ private:
                     feat_matrix[i][j] -= base_matrix[idx][j] * base_weight[idx];
             }
         }
+
         return vector_L1(base_weight);
     }
 

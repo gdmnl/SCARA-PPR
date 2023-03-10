@@ -8,9 +8,15 @@
 // #ifndef ENABLE_RW
 // #define ENABLE_RW
 // #endif
-#ifndef DEBUG
-#define DEBUG
-#endif
+// #ifndef ENABLE_PI
+// #define ENABLE_PI
+// #endif
+// #ifndef ENABLE_INITTH
+// #define ENABLE_INITTH
+// #endif
+// #ifndef DEBUG
+// #define DEBUG
+// #endif
 
 #include <queue>
 #include <vector>

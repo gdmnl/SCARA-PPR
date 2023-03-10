@@ -8,7 +8,6 @@
 #include <cmath>
 #include <vector>
 #include <cassert>
-#include <cmath>
 #include <numeric>
 #include <queue>
 #include <unordered_map>
@@ -338,13 +337,30 @@ public:
         std::fill(is_active.begin(), is_active.end(), false);
         active_vertices.clear();
 
+        uint32_t num_active = 0;
+        const FLT one_minus_alpha = 1.0 - _alpha;
+        const NInt queue_threshold = (numOfVertices / avg_deg * 4);
+        const uint32_t initial_size = std::max(num_walks / (1000 * d_log_numOfVertices), 1.0);
+        const uint32_t step_size = std::max(powf(initial_size, 1.0 / 3.0), 2.0f);
+        const FLT initial_threshold = avg_deg * initial_size / step_size / one_minus_alpha / 4;
+
         if (_seeds_ids.size() == graph.getNumOfVertices()) {
             for(NInt i = 0; i < graph.getNumOfVertices(); i++){
+#ifdef ENABLE_INITTH
+                if (fabs(residuals[i]) > initial_threshold) {
+                    active_vertices.push(i);
+                    is_active[i] = true;
+                    residuals[i] *= num_walks;
+                } else if (residuals[i] != 0.0) {
+                    residuals[i] *= num_walks;
+                }
+#else
                 if(residuals[i] != 0.0){
                     active_vertices.push(i);
                     is_active[i] = true;
                     residuals[i] *= num_walks;
                 }
+#endif
             }
         } else {
             for(NInt id = 0; id < _seeds_ids.size(); id++){
@@ -360,12 +376,6 @@ public:
 
         // Forward Push
         time_start = getCurrentTime();
-        uint32_t num_active = 0;
-        const FLT one_minus_alpha = 1.0 - _alpha;
-        const NInt queue_threshold = (numOfVertices / avg_deg * 4);
-        const uint32_t initial_size = std::max(num_walks / (1000 * d_log_numOfVertices), 1.0);
-        const uint32_t step_size = std::max(powf(initial_size, 1.0 / 3.0), 2.0f);
-
         for (uint32_t scale_factor = initial_size;
              scale_factor >= 1 && active_vertices.size() < queue_threshold;) {
             const FLT scale_factor_over_one_minus_alpha = scale_factor / one_minus_alpha;
@@ -409,6 +419,7 @@ public:
         time_fp += getCurrentTime() - time_start;
 
         // Power Iteration
+#ifdef ENABLE_PI
         time_start = getCurrentTime();
         num_active = active_vertices.size();
         while (num_active > queue_threshold) {
@@ -434,6 +445,7 @@ public:
             }
         }
         time_it += getCurrentTime() - time_start;
+#endif
 
         // Forward Push 2
         time_start = getCurrentTime();
