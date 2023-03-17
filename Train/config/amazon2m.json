@@ -1,0 +1,20 @@
+{
+    "data": "amazon2m",
+    "path": "../data/",
+    "algo": "featpush",
+    "epochs": 1000,
+    "patience": 100,
+    "batch": 2048,
+    "lr": 0.005,
+    "weight_decay": 0,
+    "layer": 4,
+    "hidden": 2048,
+    "dropout": 0.1,
+    "bias": "bn",
+    "alpha": 0.2,
+    "eps": 4,
+    "rrz": 0.2,
+    "inductive": true,
+    "multil": false,
+    "spt": 1
+}

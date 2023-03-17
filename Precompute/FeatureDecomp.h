@@ -47,7 +47,6 @@ public:
 private:
     ScoreMatrix U_, V_;
     ScoreVector S_;
-    ScoreFlt TOL = 1e-6;
     int rank_;
 
     /*
@@ -191,7 +190,7 @@ public:
             }
 
             Z += mu * Zi;
-            mu = (mu * rho < mu_bar) ? mu * rho : mu_bar;
+            mu = std::min(mu * rho, mu_bar);
         }
         // mu = k * nc * nr / (4 * l1_norm);
         // M2 = M + Z / mu;
@@ -199,25 +198,25 @@ public:
         // shrink(M2 - L, lambda/mu, S);
     }
 
-    ScoreMatrix fit_fixed(const ScoreMatrix B, const int maxiter = 5, const ScoreFlt k = 1.0) {
-        int rank = B.cols();
-        ScoreFlt lambda = mul * rank / (4 * sqrt(nr + nc));
-        ScoreFlt mu = k * nc * nr / (4 * l1_norm);
+    ScoreMatrix fit_fixed(const ScoreMatrix B, const int maxiter = 10, const ScoreFlt k = 1.0) {
+        int rank = B.cols();                                // B: Vs_num * base_size
+        ScoreFlt lambda = mul * rank / (sqrt(nr + nc));
+        ScoreFlt mu = k * nc * nr / (16 * l1_norm);
         ScoreFlt mu_bar = mu / TOL;
         ScoreFlt rho = k * 1.5;
-        ScoreFlt init_scale = std::max(spe_norm, M.lpNorm<Eigen::Infinity>()) * lambda;
+        // ScoreFlt init_scale = std::max(spe_norm, M.lpNorm<Eigen::Infinity>()) * lambda;
         // ScoreMatrix Z = M / init_scale;
         ScoreMatrix Z = ScoreMatrix::Zero(nr, nc);
         ScoreMatrix M2, Theta;
 
-        RandomizedSvd Bsvd(B, rank);
-        ScoreMatrix Binv = Bsvd.pinv();
+        RandomizedSvd Bsvd(B, rank, 0, sqrt(rank));
+        ScoreMatrix Binv = Bsvd.pinv();                     // Binv: base_size * Vs_num
 
         for (int i = 0; i < maxiter; ++i) {
             // cout<<"  r: "<<lambda/mu<<", ";
             M2 = M + Z / mu;
             /* update estimate of low-rank component */
-            Theta = Binv * (M2 - S);
+            Theta = shrink(Binv * (M2 - S), TOL*10);     // Theta: base_size * feat_size
             L = B * Theta;
             /* update estimate of sparse component */
             S = shrink(M2 - L, lambda/mu);
@@ -225,13 +224,14 @@ public:
             /* compute residual */
             ScoreMatrix Zi = M - L - S;
             ScoreFlt err = Zi.norm();
-            // cout << "err: "<<err/fro_norm << " Abs: "<<S.lpNorm<1>() << endl;
+            // cout << "  > " << L.lpNorm<1>() << " " << S.lpNorm<1>() << " " << Theta.lpNorm<1>();
+            // cout << "  err: "<<err/fro_norm << " err Abs: "<<Zi.lpNorm<1>() << endl;
             if (err < TOL * fro_norm) {
                 break;
             }
 
             Z += mu * Zi;
-            mu = (mu * rho < mu_bar) ? mu * rho : mu_bar;
+            mu = std::min(mu * rho, mu_bar);
         }
         return Binv * (M - S);
     }

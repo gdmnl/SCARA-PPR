@@ -8,6 +8,7 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <numeric>
 #include "BasicDefinition.h"
 #include "MyType.h"
 #include "FeatureDecomp.h"
@@ -49,6 +50,16 @@ inline IntVector arg_kmin(const std::vector<FLT> &Vec, const NInt k) {
         res[i] = q.top().second;
         q.pop();
     }
+    return res;
+}
+
+template<class FLT>
+inline IntVector arg_decsort_abs(const std::vector<FLT> &Vec) {
+    /* Get the indices of Vec in descending order */
+    IntVector res(Vec.size());
+    std::iota(res.begin(), res.end(), 0);
+    std::sort(res.begin(), res.end(),
+              [&Vec](NInt i1, NInt i2) { return fabs(Vec[i1]) > fabs(Vec[i2]); });
     return res;
 }
 

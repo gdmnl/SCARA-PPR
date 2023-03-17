@@ -3,6 +3,7 @@
   Author: nyLiao
 */
 #include <thread>
+#include <immintrin.h>
 #include "Graph.h"
 #include "SpeedPPR.h"
 #include "HelperFunctions.h"
@@ -263,12 +264,21 @@ protected:
 
         // ===== Residue reuse
         time_start = getCurrentTime();
+        const NInt V_num_fit = (V_num / 8) * 8;
         for (NInt idx = 0; idx < base_size; idx++) {
-            if (fabs(base_weight[idx]) > TOL) {
-                for (NInt j = 0; j < V_num; j++)
-                    _gstruct.means[j] += base_result[idx][j] * base_weight[idx];
+            if (base_weight[idx] == 0) continue;
+            for (NInt j = 0; j < V_num_fit; j += 8) {
+                __m256 mva = _mm256_set1_ps(base_weight[idx]);
+                __m256 mvb = _mm256_loadu_ps(&base_result[idx][j]);
+                __m256 mvc = _mm256_loadu_ps(&_gstruct.means[j]);
+                mvc = _mm256_add_ps(mvc, _mm256_mul_ps(mva, mvb));
+                _mm256_storeu_ps(&_gstruct.means[j], mvc);
+            }
+            for (NInt j = V_num_fit; j < V_num; j++) {
+                _gstruct.means[j] += base_result[idx][j] * base_weight[idx];
             }
         }
+
         // Save embedding vector of feature i on all nodes to out_matrix
         feat_matrix[i].swap(_gstruct.means);        // feat_matrix[i] = _gstruct.means;
         time_write[tid] += getCurrentTime() - time_start;
@@ -299,9 +309,11 @@ public:
 
     void show_statistics() {
         avg_tht /= re_feat_num;
-        avg_res /= re_feat_num;
         MSG(avg_tht);
+#ifdef DEBUG
+        avg_res /= re_feat_num;
         MSG(avg_res);
+#endif
         MSG(re_feat_num);
         FeatProc::show_statistics();
         printf("Reuse Time Sum: %.6f, Average: %.8f / thread\n", vector_L1(time_reuse), vector_L1(time_reuse) / thread_num);
@@ -418,13 +430,35 @@ private:
     /* Compute coefficients (theta) of bases, feat_matrix[i] is updated to residue */
     ScoreFlt reduce_feat(const NInt i, FltVector &base_weight) {
         base_weight.swap(theta_matrix[i]);
-        for (NInt idx = 0; idx < base_size; idx++) {
-            if (fabs(base_weight[idx]) > TOL) {
-                for (NInt j = 0; j < V_num; j++)
-                    feat_matrix[i][j] -= base_matrix[idx][j] * base_weight[idx];
+        // Sort theta and apply TOL threshold
+        IntVector base_idx = arg_decsort_abs(base_weight);
+        int32_t base_tol_idd, idx;
+        for (base_tol_idd = base_size-1; base_tol_idd >= 0; base_tol_idd--) {
+            idx = base_idx[base_tol_idd];
+            if (fabs(base_weight[idx]) < TOL) {
+                base_weight[idx] = 0.0f;
+            } else {
+                break;
             }
         }
 
+        // TODO: parallelize
+        FltVector &feat = feat_matrix[i];
+        if (base_tol_idd > -1) {
+            // Reduce feature by bases
+            for (NInt idd = 0; idd < base_tol_idd; idd++) {
+                idx = base_idx[idd];
+                for (NInt j = 0; j < V_num; j++)
+                    feat[j] -= base_matrix[idx][j] * base_weight[idx];
+            }
+            idx = base_idx[base_tol_idd];
+            const ScoreFlt feat_th = base_size / (V_num * sqrt(V_num));
+            for (NInt j = 0; j < V_num; j++) {
+                feat[j] -= base_matrix[idx][j] * base_weight[idx];
+                // Shrink small values
+                feat[j] = (fabs(feat[j]) < feat_th) ? 0.0f : feat[j];
+            }
+        }
         return vector_L1(base_weight);
     }
 
@@ -440,6 +474,7 @@ public:
         ScoreFlt avg_degree = graph.getNumOfEdges() / (ScoreFlt) graph.getNumOfVertices() / 2;
         // NInt        Vs_num = std::max(3*base_size, NInt (V_num*param.base_ratio));
         NInt        Vs_num = ceil(0.1 * V_num);
+        // NInt        Vs_num = V_num;
         IntVector   Vs_nodes = sample_nodes(Vt_nodes, Vs_num);
         ScoreMatrix feat_sample_Matrix = feat_matrix.to_Eigen(Vs_nodes);
         base_idx = select_pc(feat_sample_Matrix, theta_matrix, base_size, sqrt(avg_degree));
