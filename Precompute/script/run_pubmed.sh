@@ -9,5 +9,5 @@ mkdir -p ${SAVEDIR}
         -graph adj.txt -feats feats_normt.npy \
         -alpha 0.1 -epsilon 2 -thread_num 1 \
         -seed ${SEED} > ${SAVEDIR}/pre_${SEED}.txt
-# ../Precompute/build/featpush -algo featpush -data_folder ../data/pubmed -estimation_folder ../save/pubmed/featpush/0 -graph adj.txt -feats feats_normt.npy -thread_num 1 -seed 0 -alpha 0.1 -epsilon 2
-# ../Precompute/build/featpush -algo featpca -data_folder ../data/pubmed -estimation_folder ../save/pubmed/featpca/0 -graph adj.txt -feats feats_normt.npy -thread_num 1 -seed 0 -alpha 0.1 -epsilon 2
+# ../Precompute/build/featpush -algo featpush -data_folder ../data/pubmed -graph adj.txt -feats feats_normt.npy -thread_num 1 -seed 0 -alpha 0.1 -epsilon 2
+# ../Precompute/build/featpush -algo featpca -data_folder ../data/pubmed -graph adj.txt -feats feats_normt.npy -thread_num 1 -seed 0 -alpha 0.1 -epsilon 2

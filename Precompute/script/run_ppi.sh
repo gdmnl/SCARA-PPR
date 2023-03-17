@@ -17,4 +17,5 @@ mkdir -p ${SAVEDIR}
         -graph adj.txt -feats feats_normt.npy \
         -alpha 0.3 -epsilon 0.5 -thread_num 1 \
         -seed ${SEED} > ${SAVEDIR}/pre_${SEED}.txt
-# ../Precompute/build/featpush -algo featpush -data_folder ../data/ppi -estimation_folder ../save/ppi/featpush/7 -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.3 -epsilon 0.5
+# ../Precompute/build/featpush -algo featpush -data_folder ../data/ppi -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.3 -epsilon 0.5
+# ../Precompute/build/featpush -algo featpca -data_folder ../data/ppi -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.3 -epsilon 0.5

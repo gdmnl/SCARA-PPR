@@ -305,7 +305,7 @@ class DataProcess(object):
                 assert self.idx_train is not None
                 np.savetxt(self.querytrain_path, self.idx_train, fmt='%d', delimiter='\n')
             elif key == 'attr_matrix':
-                self.attr_matrix = self.attr_matrix.astype(np.float32)
+                self.attr_matrix = self.attr_matrix.astype(np.float32, order='C')
                 np.save(self.feats_path, self.attr_matrix)
             elif key == 'attr_matrix_norm':
                 self.attr_matrix_norm = self.attr_matrix_norm.astype(np.float32, order='C')

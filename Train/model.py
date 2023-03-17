@@ -23,10 +23,10 @@ class ResLinear(nn.Module):
 
     def forward(self, input):
         output = torch.mm(input, self.weight)
-        output = self.bias(output)
         # Residual connection
         if self.in_features == self.out_features:
             output += input
+        output = self.bias(output)
         return output
 
 

@@ -31,20 +31,21 @@ inline FLT vector_L2(const std::vector<FLT> Vec){
 }
 
 template<class FLT>
-inline IntVector arg_kmax(const std::vector<FLT> &Vec, const NInt k) {
+inline IntVector arg_kmin(const std::vector<FLT> &Vec, const NInt k) {
+    /* Get the last-k indices of Vec */
     std::priority_queue<std::pair<FLT, NInt>,
                         std::vector< std::pair<FLT, NInt> >,
                         std::less<std::pair<FLT, NInt> >> q;
-    for(NInt i = 0; i < Vec.size(); i++){
+    for (NInt i = 0; i < Vec.size(); i++) {
         if (q.size() < k)
             q.push({Vec[i], i});
-        else if(Vec[i] < q.top().first){
+        else if (Vec[i] < q.top().first) {
             q.pop();
             q.push({Vec[i], i});
         }
     }
     IntVector res(k);
-    for(NInt i = 0; i < k; i++){
+    for (NInt i = 0; i < k; i++) {
         res[i] = q.top().second;
         q.pop();
     }
@@ -229,14 +230,16 @@ inline IntVector select_pc(ScoreMatrix &feat_Matrix, MyMatrix &theta_matrix,
     Rpca.fit(base_size);
     ScoreVector feat_Res_ = Rpca.SparseComponent().colwise().norm();
     FltVector feat_res(feat_Res_.data(), feat_Res_.data() + feat_Res_.size());
-    IntVector base_idx = arg_kmax(feat_res, base_size);
+    IntVector base_idx = arg_kmin(feat_res, base_size);
     ScoreMatrix base_Matrix = feat_Matrix(Eigen::all, base_idx);    // base_Matrix: Vs_num * base_size
 
     // Fit theta matrix
     ScoreMatrix theta_Matrix_ = Rpca.fit_fixed(base_Matrix);
     theta_matrix.from_Eigen(theta_Matrix_.transpose());             // theta_Matrix_: feat_size * base_size
-    ScoreMatrix diff = feat_Matrix - base_Matrix * theta_Matrix_;
-    cout<< "diff Fro norm: "<<diff.norm() <<" Abs norm: "<<diff.lpNorm<1>() << endl;
+    ScoreMatrix lrcn = base_Matrix * theta_Matrix_;
+    ScoreMatrix diff = feat_Matrix - lrcn;
+    cout<< "  lrcn Fro norm: "<<lrcn.norm() <<" Abs norm: "<<lrcn.lpNorm<1>() << endl;
+    cout<< "  diff Fro norm: "<<diff.norm() <<" Abs norm: "<<diff.lpNorm<1>() << endl;
     // std::ofstream file1("output_theta.txt");
     // file1 << theta_Matrix_.transpose();
     return base_idx;

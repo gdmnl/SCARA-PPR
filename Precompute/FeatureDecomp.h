@@ -14,9 +14,9 @@
 
 
 inline ScoreMatrix shrink(const ScoreMatrix& X, const ScoreFlt tol) {
-  const ScoreMatrix a_plus = X.array() + tol;
-  const ScoreMatrix a_minus = X.array() - tol;
-  return a_plus.cwiseMin(0) + a_minus.cwiseMax(0);
+    const ScoreMatrix a_plus = X.array() + tol;
+    const ScoreMatrix a_minus = X.array() - tol;
+    return a_plus.cwiseMin(0) + a_minus.cwiseMax(0);
 }
 
 /*
@@ -131,7 +131,7 @@ public:
         fro_norm = M.norm();                        // matrix frobenius norm
         // l1_norm = M.cwiseAbs().colwise().sum().maxCoeff();   // matrix l1 norm
         l1_norm = M.lpNorm<1>();                    // coefficient-wise l1 norm
-        cout<< "L1 norm: "<<M.cwiseAbs().colwise().sum().maxCoeff() <<" Abs norm: "<<M.lpNorm<1>() << endl;
+        cout<< "  RPCA L1 norm: "<<M.cwiseAbs().colwise().sum().maxCoeff() <<" Abs norm: "<<M.lpNorm<1>() << endl;
         errmin = TOL * fro_norm;
     }
 

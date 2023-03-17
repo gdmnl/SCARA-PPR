@@ -555,7 +555,7 @@ public:
             if (residual != 0) {
                 const FLT alpha_residual = _alpha * residual;
                 means[id] += alpha_residual;
-                residuals[id] -= alpha_residual;
+                // residuals[id] -= alpha_residual;
             }
         }
 

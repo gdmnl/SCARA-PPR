@@ -11,5 +11,5 @@ do
             -alpha 0.5 -epsilon 64 -thread_num 1 \
             -seed ${SEED} > ${SAVEDIR}/pre_${SEED}.txt
 done
-# ../Precompute/build/featpush -algo featpush -data_folder ../data/reddit -estimation_folder ../save/reddit/featpush/7 -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.5 -epsilon 64
-# ../Precompute/build/featpush -algo featpca -data_folder ../data/reddit -estimation_folder ../save/reddit/featpca/7 -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.5 -epsilon 64
+# ../Precompute/build/featpush -algo featpush -data_folder ../data/reddit -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.5 -epsilon 64
+# ../Precompute/build/featpush -algo featpca -data_folder ../data/reddit -feats feats_normt.npy -thread_num 1 -seed 7 -alpha 0.5 -epsilon 64

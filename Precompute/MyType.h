@@ -58,6 +58,8 @@ private:
             //                   parent.data.begin() + (row + 1) * parent.ncol);
             parent.nrow--;
             parent.data.resize(parent.nrow * parent.ncol);
+            // NOTE: shrink_to_fit() reduces stat memory but slows down conversion
+            // parent.data.shrink_to_fit();
         }
     };
 
@@ -261,6 +263,7 @@ public:
         for (NInt i = 0; i < nrow; ++i) {
             matv2d.emplace_row(data[i].begin(), data[i].end()-tail);
             data[i].clear();
+            // data[i].shrink_to_fit();
         }
         cout<<"Expo  size: "<<matv2d.nrows()<<" "<<matv2d.ncols()<<" "<<matv2d.get_data().size()<<endl;
     }
