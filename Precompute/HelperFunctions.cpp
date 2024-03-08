@@ -131,6 +131,15 @@ Param parseArgs(int nargs, char **args) {
             exit(0);
         }
     }
+#ifdef ENABLE_RW
+    printf("ON: ENABLE_RW\n");
+#endif
+#ifdef ENABLE_PI
+    printf("ON: ENABLE_PI\n");
+#endif
+#ifdef ENABLE_INITTH
+    printf("ON: ENABLE_INITTH\n");
+#endif
     printf("%s\n", std::string(80, '-').c_str());
     return rtn;
 }

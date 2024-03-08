@@ -83,9 +83,10 @@ def split_label(seed, n, n_train_per_class, n_val, labels):
     return train_idx, val_idx, test_idx
 
 
-def split_stratify(seed, n, n_train, n_val, labels):
+def split_stratify(seed, n, n_train, n_val, labels, idx=None):
     assert labels.ndim == 1, 'Only support 1D labels'
-    idx = np.arange(n)
+    if idx is None:
+        idx = np.arange(n)
     train_idx, test_idx = train_test_split(idx, train_size=n_train, random_state=seed, stratify=labels)
     val_idx, test_idx = train_test_split(test_idx, train_size=n_val, random_state=seed, stratify=labels[test_idx])
     return train_idx, val_idx, test_idx
@@ -112,7 +113,7 @@ class DataProcess(object):
         self.query_path = self._get_path('query.txt')
         self.querytrain_path = self._get_path('query_train.txt')
         self.feats_path = self._get_path('feats.npy')
-        self.featsnorm_path = self._get_path('feats_norm.npy')
+        self.featsnorm_path = self._get_path('feats_normt.npy')
 
         self.adj_matrix = None
         self.deg = None
@@ -208,15 +209,19 @@ class DataProcess(object):
                 n_val = NVAL_PER_CLASS * self.nclass
                 if 'paper' in self.name:
                     np.random.seed(self.seed)
-                    self.input(['idx_train', 'idx_val', 'idx_test'])
-                    rnd = np.concatenate((self.idx_train, self.idx_val, self.idx_test))
-                    rnd = np.random.permutation(rnd)
-                    self.idx_train = np.sort(rnd[:n_train])
-                    self.idx_val = np.sort(rnd[n_train:n_train + n_val])
-                    self.idx_test = np.sort(rnd[n_train + n_val:])
+                    self.input(['idx_train', 'idx_val', 'idx_test', 'labels'])
+
+                    # rnd = np.concatenate((self.idx_train, self.idx_val, self.idx_test))
+                    # rnd = np.random.permutation(rnd)
+                    # self.idx_train = np.sort(rnd[:n_train])
+                    # self.idx_val = np.sort(rnd[n_train:n_train + n_val])
+                    # self.idx_test = np.sort(rnd[n_train + n_val:])
+
+                    idx_all = np.concatenate((self.idx_train, self.idx_val, self.idx_test))
+                    self.idx_train, self.idx_val, self.idx_test = split_stratify(self.seed, len(idx_all), self.n_train, self.n_val, self.labels[idx_all])
                 elif 'mag' in self.name:
-                    # self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS * 5, n_val, self.labels)
-                    self.idx_train, self.idx_val, self.idx_test = split_stratify(self.seed, self.n, n_train * 5, n_val, self.labels)
+                    self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS * 50, n_val // 4, self.labels)
+                    # self.idx_train, self.idx_val, self.idx_test = split_stratify(self.seed, self.n, n_train * 5, n_val, self.labels)
                 else:
                     # self.idx_train, self.idx_val, self.idx_test = split_random(self.seed, self.n, n_train, n_val)
                     # self.idx_train, self.idx_val, self.idx_test = split_label(self.seed, self.n, NTRAIN_PER_CLASS, n_val, self.labels)
@@ -239,9 +244,9 @@ class DataProcess(object):
                 assert self.deg is not None
                 deg_pow = np.power(np.maximum(self.deg, 1e-12), 1 - self.rrz)
                 deg_pow = diag_sp(deg_pow).astype(np.float32)
-                self.attr_matrix_norm = deg_pow @ matstd(self.attr_matrix)
+                self.attr_matrix_norm = deg_pow @ matstd(self.attr_matrix)                              # [n, F]
                 self.attr_matrix_norm = matnorm_inf_dual(self.attr_matrix_norm).astype(np.float32)
-                self.attr_matrix_norm = self.attr_matrix_norm.transpose().astype(np.float32, order='C')
+                self.attr_matrix_norm = self.attr_matrix_norm.transpose().astype(np.float32, order='C') # [F, n]
             else:
                 print("Key not exist: {}".format(key))
 

@@ -10,7 +10,7 @@
     "layer": 4,
     "hidden": 2048,
     "dropout": 0.1,
-    "bias": "bn",
+    "bias": "biasbn",
     "alpha": 0.9,
     "eps": 16,
     "rrz": 0.3,

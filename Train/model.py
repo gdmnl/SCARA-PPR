@@ -5,28 +5,38 @@ import torch.nn.functional as F
 
 
 class ResLinear(nn.Module):
-    def __init__(self, in_features, out_features, bias='none'):
+    def __init__(self, in_features, out_features, ftransform='none'):
         super(ResLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.weight = nn.Parameter(torch.FloatTensor(in_features, out_features))
-        if bias == 'bn':
-            self.bias = nn.BatchNorm1d(out_features)
+        self.bias = None
+        if ftransform == 'bn':
+            self.trans_fn = nn.BatchNorm1d(out_features)
+        elif ftransform == 'bias':
+            self.bias = nn.Parameter(torch.FloatTensor(out_features))
+            self.trans_fn = lambda x: x + self.bias
+        elif ftransform == 'biasbn':
+            self.bias = nn.Parameter(torch.FloatTensor(out_features))
+            self.bn = nn.BatchNorm1d(out_features)
+            self.trans_fn = lambda x: self.bn(x + self.bias)
         else:
-            self.bias = lambda x: x
+            self.trans_fn = lambda x: x
 
         self.reset_parameters()
 
     def reset_parameters(self):
         stdv = 1. / math.sqrt(self.weight.size(1))
         self.weight.data.uniform_(-stdv, stdv)
+        if self.bias is not None:
+            self.bias.data.zero_()
 
     def forward(self, input):
         output = torch.mm(input, self.weight)
+        output = self.trans_fn(output)
         # Residual connection
         if self.in_features == self.out_features:
             output += input
-        output = self.bias(output)
         return output
 
 

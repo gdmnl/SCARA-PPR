@@ -23,9 +23,9 @@ def lmatstd(m):
 
 def matstd_clip(m, idx, with_mean=False):
     """Standardize and clip per feature"""
-    idx = np.setdiff1d(idx, [0])
-    if (len(idx) > 0.75 * m.shape[0]) and (m.shape[0] > 2,000,000):
-        idx = np.random.choice(idx, size=int(len(idx)/5), replace=False)
+    # idx = np.setdiff1d(idx, [0])
+    # if (len(idx) > 0.75 * m.shape[0]) and (m.shape[0] > 2,000,000):
+    #     idx = np.random.choice(idx, size=int(len(idx)/5), replace=False)
     scaler = StandardScaler(with_mean=with_mean)
     scaler.fit(m[idx])
     mean, std = scaler.mean_, scaler.scale_
@@ -47,6 +47,9 @@ def diag_mul(diag, m):
 def load_node_data(algo: str, datastr: str, datapath: str,
                    inductive: bool, multil: bool, spt: int,
                    alpha: float, eps: float, rrz: float, seed: int=0):
+    if datastr == 'paper':
+        return load_paper_data(algo, datastr, datapath, inductive, multil, spt, alpha, eps, rrz, seed)
+
     print('-' * 20)
     # print("Start loading...")
     # Get degree and label
@@ -112,7 +115,8 @@ def load_node_data(algo: str, datastr: str, datapath: str,
         print(features[:5, :])
         print(f'{algo_i} train head no std ', idx_fit[:5])
         print(features[idx_fit[:5], :])
-        features = matstd_clip(features, idx_fit, True)
+        features = matstd_clip(features, idx_fit, with_mean=True)
+        # features = matstd_clip(features, idx_fit, with_mean=False)
         print(f'{algo_i} all head ')
         print(features[:5, :], flush=True)
         return features
@@ -135,6 +139,94 @@ def load_node_data(algo: str, datastr: str, datapath: str,
     # print('test head ', idx['test'][:5])
     # print(feat['test'][:5, :])
     # print(labels.size(), labels)
+    print(f"n={n}, m={m}, F_t={feat['train'].size()}")
+    print(f"n_train={idx['train'].size()}, n_val={idx['val'].size()}, n_test={idx['test'].size()}", flush=True)
+    return feat, labels, idx
+
+
+def load_paper_data(algo: str, datastr: str, datapath: str,
+                   inductive: bool, multil: bool, spt: int,
+                   alpha: float, eps: float, rrz: float, seed: int=0):
+    print('-' * 20)
+    print("Start loading paper...")
+    # Get degree and label
+    processor = DataProcess(datastr, path=datapath, rrz=rrz, seed=seed)
+    processor.input(['deg', 'labels'])
+    deg = processor.deg
+    labels = torch.LongTensor(processor.labels)
+    # Get index
+    processor.input(['idx_train', 'idx_val', 'idx_test'])
+    ridx = {'train': torch.LongTensor(processor.idx_train),
+           'val':   torch.LongTensor(processor.idx_val),
+           'test':  torch.LongTensor(processor.idx_test)}
+    ridx_all = np.concatenate((processor.idx_train, processor.idx_val, processor.idx_test), dtype=np.int64)
+    deg = deg[ridx_all]
+    labels = labels[ridx_all]
+    idx = {'train': torch.arange(processor.n_train, dtype=torch.long),
+           'val':   torch.arange(processor.n_val, dtype=torch.long)+processor.n_train,
+           'test':  torch.arange(processor.n_test, dtype=torch.long)+processor.n_train+processor.n_val}
+    # Get graph property
+    n, m = processor.n, processor.m
+
+    # Precompute integration
+    def precompute(algo_i, idx_fit):
+        # Load embedding
+        est_dir = f'../save/{datastr}/{algo_i}/{seed}'
+        if spt == 1:
+            est_file = f'{est_dir}/score_{alpha:g}_{eps:g}.npy'
+            features = np.load(est_file)
+        else:
+            features = None
+            for i in range(spt):
+                est_file = f'{est_dir}/score_{alpha:g}_{eps:g}_{i}.npy'
+                features_spt = np.load(est_file)
+                if features is None:
+                    features = features_spt.astype(np.float32)
+                else:
+                    np.concatenate((features, features_spt), axis=0, out=features, dtype=np.float32)
+                print(f'  Split {i} loaded, now shape: {features.shape}')
+        features = features[:, ridx_all]
+        features = features.transpose()                 # shape [n, F]
+        gc.collect()
+
+        # Process degree
+        deg_i = deg
+        deg_pow = np.power(np.maximum(deg_i, 1e-12), rrz - 1)
+        idx_zero = np.where(deg_i == 0)[0]
+        if len(idx_zero) > 0:
+            print(f"Warning: {len(idx_zero)} isolated nodes found: {idx_zero}!")
+            deg_pow[idx_zero] = 0
+
+        # Normalize embedding by degree
+        deg_pow = diag_sp(deg_pow)
+        features = deg_pow @ lmatstd(features)               # shape [n, F]
+        # features = diag_mul(deg_pow, lmatstd(features))
+        print(f'{algo_i} all head no std')
+        print(features[:5, :])
+        print(f'{algo_i} train head no std ', idx_fit[:5])
+        print(features[idx_fit[:5], :])
+        # features = matstd_clip(features, idx_fit, with_mean=True)
+        features = matstd_clip(features, idx_fit, with_mean=False)
+        # features = lmatstd(features)
+        print(f'{algo_i} all head ')
+        print(features[:5, :], flush=True)
+        return features
+
+    # Assign features
+    features = precompute(algo, idx['train'])
+    feat = {'val': torch.FloatTensor(features[idx['val']]),
+            'test': torch.FloatTensor(features[idx['test']])}
+    if inductive:
+        features_train = precompute(f'{algo}_train', np.arange(len(idx['train'])))
+        feat['train'] = torch.FloatTensor(features_train)
+        del features, features_train
+    else:
+        feat['train'] = torch.FloatTensor(features[idx['train']])
+        del features
+    gc.collect()
+
+    print('train head ', idx['train'][:5])
+    print(feat['train'][:5, :].numpy())
     print(f"n={n}, m={m}, F_t={feat['train'].size()}")
     print(f"n_train={idx['train'].size()}, n_val={idx['val'].size()}, n_test={idx['test'].size()}", flush=True)
     return feat, labels, idx

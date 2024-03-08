@@ -1,18 +1,35 @@
 # SCARA-PPR
-This is the original code for *SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization*
+This is the original code for *"SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization"* (VLDB 2022) and *"Scalable Decoupling Graph Neural Networks with Feature-Oriented Optimization"* (VLDBJ 2023). 
 
-[Paper](https://www.vldb.org/pvldb/vol15/p3240-liao.pdf) |
+[Paper - VLDB](https://www.vldb.org/pvldb/vol15/p3240-liao.pdf) |
+[Paper - VLDBJ](https://link.springer.com/article/10.1007/s00778-023-00829-6) |
 [GitHub](https://github.com/gdmnl/SCARA-PPR) |
 [Tech Report](https://sites.google.com/view/scara-techreport) |
 [arXiv](https://arxiv.org/abs/2207.09179)
 
-## Citing
+## Citation
 
-If you find this work useful, please cite our paper:
->  Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.
->
->  SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.
->
+If you find this work useful, please cite our papers:
+### VLDBJ:
+>  Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.  
+>  Scalable Decoupling Graph Neural Networks with Feature-Oriented Optimization.  
+>  The VLDB Journal, 33, 2023. doi:10.1007/s00778-023-00829-6.
+```
+@article{liao2023scalable,
+  title={Scalable Decoupling Graph Neural Networks with Feature-Oriented Optimization},
+  author={Liao, Ningyi and Mo, Dingheng and Luo, Siqiang and Li, Xiang and Yin, Pengcheng},
+  journal={The {VLDB} Journal},
+  volume={33},
+  year={2023},
+  publisher={Springer},
+  url={https://link.springer.com/article/10.1007/s00778-023-00829-6},
+  doi={10.1007/s10994-021-06049-9}
+}
+```
+
+### VLDB:
+>  Ningyi Liao, Dingheng Mo, Siqiang Luo, Xiang Li, and Pengcheng Yin.  
+>  SCARA: Scalable Graph Neural Networks with Feature-Oriented Optimization.  
 >  PVLDB, 15(11): 3240-3248, 2022. doi:10.14778/3551793.3551866.
 ```
 @article{liao2022scara,
